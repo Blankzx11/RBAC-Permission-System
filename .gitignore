@@ -1,0 +1,15 @@
+# 前端
+node_modules/
+dist/
+.env
+.env.local
+
+# 后端
+target/
+*.class
+.idea/
+*.iml
+
+# 系统
+.DS_Store
+*.log
