@@ -1,0 +1,22 @@
+@startuml
+left to right direction
+actor 平台管理员 as P
+actor 系统管理员 as A
+actor 普通用户 as U
+rectangle 多系统RBAC平台 {
+usecase "账号与子系统管理" as UC_PLATFORM
+usecase "登录与上下文切换" as UC_LOGIN
+usecase "成员角色权限管理" as UC_DIRECTORY
+usecase "授权与审计" as UC_ASSIGNMENT
+usecase "个人中心" as UC_PROFILE
+}
+P --> UC_PLATFORM
+P --> UC_LOGIN
+P --> UC_DIRECTORY
+P --> UC_ASSIGNMENT
+A --> UC_LOGIN
+A --> UC_DIRECTORY
+A --> UC_ASSIGNMENT
+U --> UC_LOGIN
+U --> UC_PROFILE
+@enduml

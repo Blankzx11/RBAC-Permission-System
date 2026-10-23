@@ -1,0 +1,45 @@
+[
+  {
+    "Name": "需求分析.doc",
+    "Length": 14336,
+    "ReadStatus": "已读取正文"
+  },
+  {
+    "Name": "OOAD-RBAC-项目实施方案.md",
+    "Length": 49369,
+    "ReadStatus": "已读取正文"
+  },
+  {
+    "Name": "智能纪要：AI辅助软件开发实践与行业影响分析_2026年10月13日.md",
+    "Length": 15961,
+    "ReadStatus": "已读取正文"
+  },
+  {
+    "Name": "新录音.m4a",
+    "Length": 22250969,
+    "ReadStatus": "仅确认存在，未转写"
+  },
+  {
+    "Name": "OOAD_Grading_2026(2).pdf",
+    "OriginalPath": "D:/OOAD_Grading_2026(2).pdf",
+    "Length": 220298,
+    "SHA256": "c5f5b9d1a6184200e8a163ec4a7a7dc22dc06949c1a576e10c405a17f18ea303",
+    "Pages": 6,
+    "ReadStatus": "全文提取；关键页原页面渲染复核"
+  },
+  {
+    "Name": "0.课程介绍(7).pdf",
+    "OriginalPath": "D:/0.课程介绍(7).pdf",
+    "Length": 917770,
+    "SHA256": "bdc85df141ac7d1f5c2851b4fac9b4d784baf1230b89947399fb781fa70c1609",
+    "Pages": 21,
+    "ReadStatus": "全文提取；关键页原页面渲染复核"
+  },
+  {
+    "Name": "课堂开发步骤.png",
+    "OriginalPath": "C:\\Users\\123\\AppData\\Local\\Temp\\codex-clipboard-3edc171e-deae-4142-af08-cf49f3121bdc.png",
+    "Length": 189323,
+    "SHA256": "62052aab59d9786d95311c0d843655e057fb45c1d4035ddd1c90c90d1db88237",
+    "ReadStatus": "已按用户图片识读"
+  }
+]

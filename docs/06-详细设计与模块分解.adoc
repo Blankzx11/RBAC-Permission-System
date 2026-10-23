@@ -1,0 +1,212 @@
+= 详细设计与模块分解
+:imagesdir: images
+
+== 分解目标和总体架构
+
+本章是共同详细设计底稿。共同评审需求、原型、API、数据库后，按07只分详细功能设计；后文提及的编码和测试条件属于未来实施说明，不是本轮六人任务。每个任务包以相同契约为输入，不允许各模块自行另起字段或响应格式。
+
+RBAC0 主链为 Controller → 用例事务脚本 → Mapper；安全门与权限求解集中实现，避免在多个业务 Service 中复制。Controller 不组织业务事务，Mapper 不接收可随意为空的 sysId。数据对象仅承载数据，SQL 层负责隔离过滤；这仍是面向功能的分解，即使实现语言使用 Java 类。
+
+image::architecture.svg[模块与依赖关系]
+
+建议目录如下，RBAC0 可在单 Maven 工程内使用包边界，避免七天内先搭过多构建模块。本版保持单体包边界，不增加未使用的扩展实现。
+
+[source,text]
+----
+backend/src/main/java/.../rbac/
+  api/                 Controller, DTO, ErrorHandler
+  application/         各模块事务脚本与用例接口
+  security/            身份安全门、上下文、权限拦截
+  persistence/         Mapper 与 PO
+  core/                ID、版本、权限快照等数据契约
+  audit/               同事务审计写入与只读查询
+  config/              装配、连接池、安全配置
+frontend/src/
+  features/auth,platform,members,roles,permissions,audit,profile/
+  shared/api,router,permission,components/
+----
+
+== 模块边界清单
+
+[cols="1,2,3,2,2",options="header"]
+|===
+|编号 |模块 |职责 |依赖 |核心表
+|M00 |基础契约与安全上下文 |统一响应、错误、严格 DTO、requestId、分页、ID 与 ETag、不可变 SysContext |无业务依赖 |无
+|M01 |身份和会话 |登录限流、凭据验证、会话签发撤销、上下文切换、改密 |M00 M02 M03 |user session login_log
+|M02 |平台与账号 |子系统、全局账号、平台标记、SYS_ADMIN 初始化、最后管理员保护 |M00 M07 |platform_guard user system
+|M03 |成员管理 |本系统成员资格、显示名、启停、全局账号精确匹配 |M00 M02 M07 |member user
+|M04 |角色与权限目录 |角色和权限 CRUD、菜单树、内置保护、引用检查 |M00 M03 M07 |role permission
+|M05 |授权事务 |成员角色/角色权限替换、并发、委派边界、版本递增 |M03 M04 M06 M07 |user_role role_permission system
+|M06 |权限求解和拦截 |每请求安全门、有效权限、菜单投影、版本缓存 |M00 M01 M03 M04 |session member role permission 关联
+|M07 |审计与安全日志 |成功变更前后值审计、失败安全事件、范围查询 |M00 |audit_log login_log
+|M08 |前端和原型落地 |页面、表单、路由、按钮、API 适配、错误状态 |M00 契约 |不直接访问数据库
+|M09 |数据与交付验证 |迁移、初始化器、集成环境、JaCoCo、部署和压测 |全部模块 |全部
+|===
+
+M07 不回调 M05；由 M05 在其事务中调用 M07 的 AuditWriter，避免循环依赖。M06 只读权限事实，不调用会发起授权修改的服务。M01 读取成员和安全门数据时经只读端口访问，不在 security 与 auth 包之间相互注入业务服务。
+
+== 核心输入输出端口
+
+[source,java]
+----
+record SysContext(long actorId, Long sysId, String sessionId,
+                  boolean platformAdmin, String requestId) {}
+record Version(long value) {}
+record AssignmentResult(Set<Long> ids, Version version) {}
+record PermissionSnapshot(long sysId, long userId, long policyVersion,
+                          Set<String> codes, List<MenuItem> menus) {}
+interface AssignmentUseCase {
+  AssignmentResult replaceMemberRoles(SysContext ctx, long userId,
+      Set<Long> roleIds, Version expected);
+  AssignmentResult replaceRolePermissions(SysContext ctx, long roleId,
+      Set<Long> permissionIds, Version expected);
+}
+interface PermissionResolver {
+  PermissionSnapshot resolve(SysContext ctx);
+}
+interface AuditWriter {
+  void appendInCurrentTransaction(AuditChange change);
+}
+----
+
+以上为设计签名，非已编译源码。SysContext 由可信过滤器生成，禁止从请求 JSON 构造；集合构造时防御性复制。`sysId=null` 仅代表平台上下文，不表示查询全部系统。平台跨系统查询使用独立平台端口和显式过滤器。
+
+== M00 基础契约任务包
+
+. M00.1 建立请求响应 DTO 与 ErrorCode，严格拒绝未知字段；ID 转字符串；时间统一 UTC。
+. M00.2 生成 requestId，返回响应头和 body；外部提供的值限制长度字符，不能直接拼日志。
+. M00.3 解析分页、sort 白名单、If-Match；缺失 428、格式错误 400、冲突 412。
+. M00.4 建 SysContext，过滤器校验后放 request scope，不用全局可变静态变量传递用户。
+
+输入是 OpenAPI；输出为公共契约包和最小控制器样例。验收覆盖未知字段、超大 ID、无效 ETag、100 以上 pageSize 和非法 sort。禁止把万能 Map 当所有写请求的数据载体。
+
+== M01 身份与会话任务包
+
+. M01.1 登录脚本：规范化 username → 账号/IP 限流 → 查用户 → 校验锁定和密码 → 查 sysId/成员 → 创建会话 → 签发 token → 记录结果。不存在账号与错误密码统一提示；哈希比较策略避免明显的用户枚举差异。
+. M01.2 会话安全门：校验 token 固定算法、issuer、audience、exp；按 sid 查 session，要求未撤销、未过期、user_id/sys_id/auth_version 与签名字段一致。
+. M01.3 上下文切换：校验旧会话，验证目标系统资格，新建会话并撤销旧会话；回滚时不能留下已撤销而无新会话的状态。
+. M01.4 登出与改密：登出设置 revoked_at；改密校验旧密码，锁账号更新 hash/authVersion/version，审计不包含密码；返回后重新登录。
+. M01.5 失败计数：用户行锁/原子更新失败次数与 locked_until；并发失败不会丢计数。账号/IP 限流可以 Redis 实现，故障时启用保守本地限流，不能取消密码校验。
+
+输入 LoginRequest、ContextRequest 和认证头；输出 SessionCreated 与 me 信息；持久化边界为会话和账号。验收包含锁定期间正确密码、锁定到期、全局停用、成员停用、系统停用、篡改 sysId、登出、改密旧 token、多实例状态一致。
+
+== M02 平台与账号任务包
+
+. M02.1 全局账号列表、创建和属性更新，只允许平台会话；username 唯一由 DB 兜底，重复返回 409。
+. M02.2 创建子系统，在同事务插入 system、固定管理 MENU/ACTION 和 SYS_ADMIN、角色权限关联，初始化 policyVersion=1。角色 ID 和权限 ID 均服务端生成，不在后端依赖示例固定数字。
+. M02.3 平台管理员可把已有账号加入系统并指派内置角色，沿用 M03/M05 的契约和事务规则，不能通过修改 builtin 字段伪造内置对象。
+. M02.4 更新账号/系统锁 guard；影响有效权限的系统变更锁 system 并递增 policyVersion；全局账号安全变更递增 authVersion。
+. M02.5 最后管理员保护：guard 锁内读取启用 platform_admin 数量，禁用或降级最后一个则 409；禁止业务 SQL 绕过此写入端口。
+
+输出账号/系统 CRUD 端点与初始化器；不提供密码重置邮件、物理删除账号和系统。验收包括两个管理员并发互相停用、系统停用后旧会话、重复编码、系统管理员伪造 platformAdmin 字段。
+
+== M03 成员管理任务包
+
+. M03.1 分页查询本系统成员，联查全局显示字段，不返回 passwordHash、authVersion 或他系统成员列表。
+. M03.2 精确 username 添加已存在全局账号；锁系统行确认可用，插 member，审计并递增 policyVersion。
+. M03.3 本地编辑 displayName/status，锁系统和成员，条件匹配 version；不允许修改全局账号字段。
+. M03.4 成员停用后保留 UA，页面提示恢复将恢复角色效果；鉴权每次检查 member.status。
+
+输入路径 sysId、username 或 MemberPatch；输出 MemberView，成员根 ETag 作为后续角色指派版本。验收：A 成员停用不影响 B、添加重复成员、未知用户提示、跨系统 userId、停用仍有受保护 SYS_ADMIN 的场景（系统管理员不得修改，平台管理员可处理）。
+
+== M04 角色与权限目录任务包
+
+. M04.1 角色 create/read/patch/delete，编码唯一不可改；读写均带 sys_id。
+. M04.2 权限 create/read/patch/delete；校验 MENU routePath 为本地预定义路由键/路径、ACTION 路由为空，父节点为 MENU，同系统且无环；禁止任意外部 URL 或脚本。
+. M04.3 菜单投影与权限定义分离：管理页可读完整目录；me/menus 只返回有页面权限的节点及必要的无可点击父容器。
+. M04.4 删除检查业务引用：role 检查 UA、PA；permission 检查子节点与 PA；有引用 409，不悄悄级联撤权。
+. M04.5 更改已授权角色状态、权限状态、菜单归属需委派检查；若其现有有效权限超出操作者可委派集合，拒绝。SYS_ADMIN角色记录及其用户/权限关联只有平台管理员可变更；权限定义本身按目录操作权限和委派范围管理。
+
+输出目录端点和树投影函数；验收含父子权限独立、循环父链、同编码跨系统允许、同系统重复拒绝、删除关联冲突、停用再启用效果。
+
+== M05 授权事务任务包
+
+本模块是详细设计和代码评审重点，不只分为“两个关联表 CRUD”。
+
+. M05.1 GET 成员角色集合/角色权限集合，同时读取根 version 并输出 ETag，查询需在同一一致读快照内。
+. M05.2 对传入 IDs 去重排序、限制集合最多 1000 项；验证数量和空集合语义。
+. M05.3 开事务，按固定顺序锁 system，再锁 member 或 role；使用当前读重验操作者安全状态、有效权限和目标所有权，防止请求开始鉴权后操作者被撤权仍写入。
+. M05.4 检查 If-Match、受保护角色、所有对象有效且同系统；成员角色变更必须同时校验旧角色和新角色不含操作者不可管理的受保护对象，不能以清空集合移除 SYS_ADMIN。
+. M05.5 委派检查不能只看新集合：对既有角色权限更改也要检查该角色旧有效权限和新有效权限均在操作者可管理范围。
+. M05.6 计算 additions/removals，仅修改差集；若无变化直接返回当前版本。否则写关联，根 version+1，system.policy_version+1，写前后集合审计，提交。
+. M05.7 提交后可通知其他实例预热缓存；通知失败不影响正确性，因为请求仍读主库版本。不得先改 Redis 再提交 DB。
+
+image::assignment-sequence.svg[替换成员角色事务时序]
+
+[source,text]
+----
+replaceMemberRoles(ctx, userId, desiredIds, expectedVersion):
+  begin transaction READ_COMMITTED
+  sys = lockSystem(ctx.sysId)
+  actor = loadCurrentActorAndPermissions(ctx)   // 当前读，非缓存旧权限
+  member = lockMember(ctx.sysId, userId)
+  require member.version == expectedVersion
+  old = loadRoleIds(ctx.sysId, userId)
+  candidates = loadRolesWithOwnershipCheck(ctx.sysId, desiredIds)
+  validateProtectedAndDelegation(actor, old, candidates)
+  if old == desiredIds: return current result
+  applyDifference(old, desiredIds)
+  increment member.version, sys.policy_version
+  appendAudit(old, desiredIds)                  // 同一数据库事务
+  commit
+----
+
+竞争测试：T1/T2 同时读 version=7，T1 获得 system 锁提交到 8，T2 获锁后返回 412；若 T1 是撤销 T2 操作者权限，T2 锁内重验必须 403。审计 INSERT 失败时关联、两个版本均回滚。
+
+== M06 权限求解和拦截任务包
+
+RBAC0 求解：先验证 system、user、member、session；读取用户有效 UA 连接 ENABLED role，再连接 PA 与 ENABLED permission，取 code 去重。SYS_ADMIN 使用初始化的明确权限集合；平台管理员在绑定系统上下文中可进入特权分支，但只返回当前系统已注册有效权限，不能返回任意跨系统对象。
+
+. M06.1 统一鉴权注解/路由元数据映射权限码；静态端点元数据可声明多个权限且约定 ALL，不使用运行时客户端传入的 code 决策。
+. M06.2 缓存键 `perm:{sysId}:{userId}:{policyVersion}`。不在其他系统或用户之间复用。
+. M06.3 权限求解前后校验版本一致，再缓存；最大重试一次仍频繁变化时回源一致事务或返回 503，不能返回混合快照。
+. M06.4 MENU 权限与 ACTION 权限全都加入 code 集合，API 拦截使用 ACTION；不能像参考方案示例只聚合菜单按钮却漏掉后端权限。
+. M06.5 me/menus 构建树，补祖先容器时标记 navigable=false；通过受控静态路由字典定位前端组件。
+. M06.6 每次被保护资源查询在 Mapper 方法签名强制传 sysId，SQL 使用 `WHERE sys_id = :ctxSysId AND id = :id`；拦截器并不能替代这一步。
+
+时间复杂度：RBAC0 遍历用户关联角色及这些角色关联权限，O(Ru+Pu)，Set 去重内存 O(Pu)；缓存命中仍有主库安全门读取。建议 TTL 60 秒并加随机抖动仅回收旧版本，不用 TTL 实现撤权时效。上线前测 DB 安全门吞吐，不能声称这是零数据库访问的 5000 QPS 方案。
+
+== M07 审计任务包
+
+. M07.1 AuditChange 明确 actorId/name、sysId、targetType/id、action、before、after、requestId、时间/IP；授权只存白名单 IDs、版本及必要名称快照。
+. M07.2 appendInCurrentTransaction 要求已有事务；核心变更审计失败抛错，不降级为控制台打印。
+. M07.3 失败鉴权和登录事件不附着失败业务事务，单独有限长日志；安全日志故障告警且不泄露敏感信息，不影响“拒绝”的结果。
+. M07.4 平台与系统日志分别查询，sys_id=null 是平台事件；非平台用户不能把 null 当无过滤条件。
+. M07.5 展示前后值 JSON，严格文本转义；不允许用户提交日志中的 actorId 和结果字段。
+
+验收：权限变更前后值、空集合、操作目标系统、分页排序、平台跨系统筛选、日志写入失败回滚，以及脱敏扫描。
+
+== M08 前端任务包
+
+. M08.1 登录和上下文状态：只在认证成功后装载 me、menus、permissions；上下文变化清空旧缓存、旧表格和路由，注销撤销会话。
+. M08.2 API client 按 OpenAPI 管理路径、string ID、ETag 与错误映射；没有特殊 HTTP 200 错误处理分支。
+. M08.3 路由守卫和按钮组件消费权限码；后端 403 仍展示统一状态，不能当作“前端漏隐藏”而取消服务端校验。
+. M08.4 账号/系统/成员/角色/权限页面；各表单只发送白名单可写字段，平台字段与成员字段不混用。
+. M08.5 授权弹窗完整集合编辑、显式保存、冲突保留输入、刷新比较，不在每勾选一次时发一笔写请求。
+. M08.6 审计和个人中心；密码提交后退出；加载、空、错、冲突、无权限、窄屏和键盘流程验证。
+
+组件建议：SystemSwitcher、PermissionAction、PagedTable、MemberRoleDialog、RolePermissionDialog、AuditDiff、ApiAnnotation。ApiAnnotation 仅评审原型使用。
+
+== M09 数据与交付任务包
+
+. M09.1 迁移脚本、可回滚的测试数据库和配置样例；密码从环境或本地秘密配置读取，不能将密钥写入仓库。
+. M09.2 写覆盖关键规则的单元与集成测试，MySQL 真事务校验复合外键、锁和 CHECK；不能用 H2 通过就宣称 MySQL 并发正确。
+. M09.3 以相同数据对 OpenAPI 做端点冒烟、隔离、重复提交、并发、审计故障测试，生成 JaCoCo。
+. M09.4 后续编码阶段提供容器、反向代理和健康检查；部署前明确目标服务器及授权。本次只有设计文件，不宣称部署完成。
+. M09.5 按 NFR 场景生成压测数据、运行及导出原始结果，记录目标与实测的差距，不能填假数据。
+
+== 本轮六人详细功能设计分工
+
+以07-RBAC0六人分工.adoc为唯一分工基线：A认证会话；B账号/子系统/成员；C角色/权限目录；D直接指派；E权限求解/菜单/鉴权；F审计。每人只交详细设计文档、函数说明与设计图，不分配前端编码、迁移执行、测试、编译或部署。
+
+本章M08/M09保留为后续实施需求和完成边界，不作为某个人在本轮的设计份额。公共约定见detail-design/00-公共函数与依赖约定.adoc。依赖对齐和设计互审方式见07。
+
+== 状态和 UML 源
+
+image::states.svg[账号和会话状态转换]
+
+`uml/use-cases.puml`、`uml/domain.puml`、`uml/components.puml`、`uml/assignment-sequence.puml`、`uml/states.puml` 为可编辑 UML 源；SVG 为本包阅读图。RBAC0 详细类职责通过端口签名、模块表和事务时序描述；所有设计签名都只覆盖 RBAC0。类名和签名是开发设计，不是已生成的可运行后端。
+
+== 后续实施与当前设计的界限
+
+第一次检查需要可运行的面向功能后端、服务器部署和JaCoCo；目前未完成。它们列在09的差距清单，不能把本地原型验证报告当后端测试或覆盖率。相关开发和运行任务不在本次六人详细功能设计分工内。

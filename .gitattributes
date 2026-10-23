@@ -1,0 +1,5 @@
+# Preserve the bytes covered by the existing build/source SHA-256 records.
+* -text
+*.pdf binary
+*.png binary
+*.zip binary

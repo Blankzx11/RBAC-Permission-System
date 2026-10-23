@@ -1,0 +1,19 @@
+@startuml
+component "M08 前端" as FE
+component "M00 API契约" as API
+component "M01 身份安全门" as AUTH
+component "M02-M05 用例事务脚本" as APP
+component "M06 权限求解" as RES
+component "M07 审计写入" as AUDIT
+database MySQL
+database Redis
+FE --> API
+API --> AUTH
+API --> APP
+APP --> RES
+APP --> AUDIT
+APP --> MySQL
+AUDIT --> MySQL
+RES --> MySQL
+RES --> Redis
+@enduml

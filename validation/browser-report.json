@@ -1,0 +1,233 @@
+{
+  "date": "2026-10-21",
+  "scope": "RBAC0",
+  "browser": "Installed Edge / headless",
+  "results": [
+    {
+      "name": "错误演示口令拒绝",
+      "passed": true
+    },
+    {
+      "name": "非平台身份不能进入平台",
+      "passed": true
+    },
+    {
+      "name": "初始两个子系统",
+      "passed": true
+    },
+    {
+      "name": "导航仅有RBAC0功能",
+      "passed": true
+    },
+    {
+      "name": "最后平台管理员不能停用",
+      "passed": true
+    },
+    {
+      "name": "普通编辑也检查版本并保留输入",
+      "passed": true
+    },
+    {
+      "name": "创建账号成功",
+      "passed": true
+    },
+    {
+      "name": "新系统初始化受保护管理员角色",
+      "passed": true
+    },
+    {
+      "name": "新系统初始化18项RBAC0权限",
+      "passed": true
+    },
+    {
+      "name": "角色编码在不同系统可重复",
+      "passed": true
+    },
+    {
+      "name": "成员页包含API标注与全局状态",
+      "passed": true
+    },
+    {
+      "name": "按已有账号添加成员",
+      "passed": true
+    },
+    {
+      "name": "同系统重复角色编码拒绝",
+      "passed": true
+    },
+    {
+      "name": "授权弹窗显示实时新增差集",
+      "passed": true
+    },
+    {
+      "name": "角色权限集合可保存",
+      "passed": true
+    },
+    {
+      "name": "授权冲突返回412",
+      "passed": true
+    },
+    {
+      "name": "重复权限ID去重后仅一项",
+      "passed": true
+    },
+    {
+      "name": "空集合明确清空权限",
+      "passed": true
+    },
+    {
+      "name": "未引用业务角色可删除",
+      "passed": true
+    },
+    {
+      "name": "拒绝修改表单注入的系统字段",
+      "passed": true
+    },
+    {
+      "name": "注入异系统角色ID整批拒绝",
+      "passed": true
+    },
+    {
+      "name": "成员角色指派成功",
+      "passed": true
+    },
+    {
+      "name": "相同授权集合不生成重复审计",
+      "passed": true
+    },
+    {
+      "name": "审计按操作类型过滤",
+      "passed": true
+    },
+    {
+      "name": "日期必须成对",
+      "passed": true
+    },
+    {
+      "name": "有效日期区间支持空结果",
+      "passed": true
+    },
+    {
+      "name": "日期逆序拒绝",
+      "passed": true
+    },
+    {
+      "name": "超过90日拒绝",
+      "passed": true
+    },
+    {
+      "name": "审计字段与API一致并含版本",
+      "passed": true
+    },
+    {
+      "name": "权限目录按菜单父子顺序排列",
+      "passed": true
+    },
+    {
+      "name": "ACTION禁止配置页面路由",
+      "passed": true
+    },
+    {
+      "name": "ACTION合法创建且排序值保存",
+      "passed": true
+    },
+    {
+      "name": "菜单父链成环拒绝",
+      "passed": true
+    },
+    {
+      "name": "系统管理员不能进入全局账号管理",
+      "passed": true
+    },
+    {
+      "name": "系统管理员不能修改内置角色",
+      "passed": true
+    },
+    {
+      "name": "新授权影响普通用户菜单",
+      "passed": true
+    },
+    {
+      "name": "只读成员不显示写操作",
+      "passed": true
+    },
+    {
+      "name": "切换系统后权限不串用",
+      "passed": true
+    },
+    {
+      "name": "375px无页面横向溢出",
+      "passed": true
+    },
+    {
+      "name": "空状态可恢复",
+      "passed": true
+    },
+    {
+      "name": "503状态可重试",
+      "passed": true
+    },
+    {
+      "name": "全局停用账号不能登录",
+      "passed": true
+    },
+    {
+      "name": "新用户不能用初始通用口令登录",
+      "passed": true
+    },
+    {
+      "name": "改密必须验证旧演示口令",
+      "passed": true
+    },
+    {
+      "name": "改密后要求重新登录",
+      "passed": true
+    },
+    {
+      "name": "改密后旧口令失效",
+      "passed": true
+    },
+    {
+      "name": "改密后新口令可登录",
+      "passed": true
+    },
+    {
+      "name": "审计不包含任何新建或修改口令",
+      "passed": true
+    },
+    {
+      "name": "原指派停用角色不被隐藏或静默取消",
+      "passed": true
+    },
+    {
+      "name": "含停用角色的候选集合要求明确处理",
+      "passed": true
+    },
+    {
+      "name": "撤销角色后审计菜单消失",
+      "passed": true
+    },
+    {
+      "name": "本系统成员停用后拒绝登录",
+      "passed": true
+    },
+    {
+      "name": "成员停用不影响另一系统",
+      "passed": true
+    },
+    {
+      "name": "系统停用后拒绝进入",
+      "passed": true
+    },
+    {
+      "name": "阅读版章节与源入口一致且全部图片加载",
+      "passed": true
+    },
+    {
+      "name": "浏览器无脚本异常",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "limitation": "仅模拟原型与文档，未执行生产API或MySQL。"
+}

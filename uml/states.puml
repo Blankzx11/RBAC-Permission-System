@@ -1,0 +1,15 @@
+@startuml
+[*] --> ENABLED
+ENABLED --> DISABLED : 平台停用 / authVersion++
+DISABLED --> ENABLED : 平台启用 / authVersion++
+state 登录锁定 {
+[*] --> 可验证
+可验证 --> 临时锁定 : 连续失败5次
+临时锁定 --> 可验证 : 15分钟到期
+}
+state 会话 {
+[*] --> ACTIVE
+ACTIVE --> REVOKED : 登出或改密
+ACTIVE --> EXPIRED : 到期
+}
+@enduml

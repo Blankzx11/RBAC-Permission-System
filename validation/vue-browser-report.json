@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-21T10:48:18.484Z",
+  "scope": "Built Vue prototype, shared JS interaction engine",
+  "results": [
+    {
+      "name": "Vue离线产物挂载并显示登录表单",
+      "passed": true
+    },
+    {
+      "name": "Tailwind布局工具类实际编译",
+      "passed": true
+    },
+    {
+      "name": "Vue宿主身份摘要随登录更新",
+      "passed": true
+    },
+    {
+      "name": "Vue评审开关驱动API注释",
+      "passed": true
+    },
+    {
+      "name": "两个API标注开关状态同步",
+      "passed": true
+    },
+    {
+      "name": "Vue工程可创建角色",
+      "passed": true
+    },
+    {
+      "name": "Vue工程角色权限集合保存",
+      "passed": true
+    },
+    {
+      "name": "Vue工程成员角色集合保存",
+      "passed": true
+    },
+    {
+      "name": "普通用户在A取得审计菜单",
+      "passed": true
+    },
+    {
+      "name": "切换B不继承A授权",
+      "passed": true
+    },
+    {
+      "name": "Vue宿主切换摘要更新",
+      "passed": true
+    },
+    {
+      "name": "可查询真实模拟授权变更",
+      "passed": true
+    },
+    {
+      "name": "详情展示前后集合及版本",
+      "passed": true
+    },
+    {
+      "name": "Vue版本375px无整页横向溢出",
+      "passed": true
+    },
+    {
+      "name": "离线产物无CDN或后端网络请求",
+      "passed": true
+    },
+    {
+      "name": "Vue工程无浏览器脚本异常",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "requests": [],
+  "limitation": "Only local memory simulation; no backend, SQL, JaCoCo or full JS static typing."
+}

@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-21T10:46:24.424Z",
+  "command": "npm run build",
+  "node": "v24.18.0",
+  "passed": true,
+  "steps": [
+    {
+      "name": "Vue/TS typecheck",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "name": "Vite + Tailwind offline bundle",
+      "exitCode": 0,
+      "output": "vite v7.3.7 building client environment for production...\ntransforming...\n✓ 10 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/rbac0-prototype.css   15.65 kB │ gzip:  4.62 kB\ndist/rbac0-prototype.js   114.28 kB │ gzip: 41.53 kB\n✓ built in 445ms\n"
+    }
+  ],
+  "versions": {
+    "vue": "3.5.44",
+    "typescript": "5.9.3",
+    "tailwindcss": "4.3.3",
+    "vite": "7.3.7",
+    "vue-tsc": "3.3.13"
+  },
+  "inputSha256": {
+    "prototype/app.js": "47bd7d4a65e6292df32102f2a659599863d39674d4e50bc51e1d6f18bf951393",
+    "prototype/demo-data.js": "07076ca3c4502c02250cd732fed926ce6921b630c7b94a2d3ec9c8a5bcb58f15",
+    "prototype/index.html": "bcd9e1cbedd5a6c586a7b89c7e56708c5f093dca511a0c39bac24352e35c5316",
+    "prototype/vue/src/App.vue": "c437e75da3d88be0caa8c42d27160a22ab609613539b1774a57421a842275211",
+    "prototype/vue/src/types.ts": "1b3a71b0ffbe2fa2defb25f44689438b9551a0a490be22bdcb7a40b30d6cec04",
+    "prototype/vue/src/engine.d.ts": "100fe437f27f665916eb41a58c140788dd83ca1e69a77bd403589a69ebebb26f",
+    "prototype/vue/src/style.css": "31be97aaae1731d76e0e25e8f5d926e2329fb9ae82fa1388048324304ad2dcc6",
+    "prototype/vue/scripts/prepare.mjs": "a43d2fa175d3c69c85983dc49e12587d9d377138cc69524e9594d9df37421bfa",
+    "prototype/vue/scripts/build.mjs": "60855be4bf9333339e4271fbe2773ff36668b7e8b648a22f767d1d3eb0bf7105",
+    "prototype/vue/scripts/offline-entry.mjs": "d1c44d429b0a5e85e918fe4daed45e8470c9dfacbeeb876d705817e56aad469f",
+    "prototype/vue/src/main.ts": "87cb35b646904d37415c5dcf092c9202c56848125d0b34fa236ee1f49fea1b7b",
+    "prototype/vue/vite.config.ts": "3767c5a9d7f25c241fe9d16d3f0bb13070638af469d988142b38cf1e4f296d74",
+    "prototype/vue/tsconfig.json": "aac39234c4b4877eac7a7e72ec8f363a85c466fadfa2613632b22de017499dc4",
+    "prototype/vue/package.json": "ac1d304639cf4651acfbf4e5ef43d6fbc069cd5fab06a872dce824643e054f93",
+    "prototype/vue/package-lock.json": "70d0a320e07b6bef16b647698d794b0890015d24f7f8ed14c41e316ed23a4e76"
+  },
+  "artifacts": [
+    {
+      "path": "prototype/vue/dist/index.html",
+      "sha256": "8b580e8d05d872d332a33d1cb58fd50d6d6ec9b8b18791d3cda84781e16b2c98"
+    },
+    {
+      "path": "prototype/vue/dist/rbac0-prototype.js",
+      "sha256": "bc39a27e1463d606715095c9478086f54384f11385bfcb8bb1c87245cee60ed1"
+    },
+    {
+      "path": "prototype/vue/dist/rbac0-prototype.css",
+      "sha256": "922dfe1b619cdd867fc6b50db5c6c683c529d8d03fe00fad2d1ece108dbb337b"
+    }
+  ],
+  "scope": "Vue/TypeScript host and typed JS boundary; JS interaction engine internals are not statically typechecked. Not a Java backend build."
+}

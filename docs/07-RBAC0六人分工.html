@@ -1,0 +1,89 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RBAC0 六人详细功能设计分工</title><style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:#20324a;background:#f5f7fb;font:15px/1.85 "Segoe UI","Microsoft YaHei",sans-serif}header{background:#183557;color:white;padding:40px max(25px,calc((100vw - 1200px)/2))}header h1{font-size:30px;margin:0 0 10px}header p{margin:0;color:#c6d6ec}header a{color:#e4efff} .layout{display:grid;grid-template-columns:240px minmax(0,960px);gap:30px;max-width:1260px;margin:30px auto;padding:0 20px}nav{position:sticky;top:18px;align-self:start;display:grid;gap:8px}nav a{font-size:13px;color:#4c6487;text-decoration:none;padding:6px 0}main{min-width:0}section{background:white;border:1px solid #e0e7f0;border-radius:10px;padding:32px;margin-bottom:25px;scroll-margin-top:15px}h2{font-size:25px;border-bottom:1px solid #dce4ef;padding-bottom:15px;margin:0 0 24px}h3{font-size:20px;margin-top:32px;color:#294d7b}h4{font-size:17px}p{overflow-wrap:anywhere}a{color:#285bdd}code{font:13px/1.7 Consolas,monospace;background:#eff3f9;padding:2px 4px;border-radius:4px;overflow-wrap:anywhere}pre{background:#f0f4fa;padding:17px;overflow:auto;border-radius:8px;white-space:pre-wrap}pre code{padding:0;background:transparent}.table-scroll{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.75}th,td{border:1px solid #dce4ee;padding:10px 12px;text-align:left;vertical-align:top;min-width:80px}th{background:#e9f0fb;color:#29466e}tr:nth-child(even){background:#fafbfd}figure{margin:25px 0}figure img{display:block;width:100%;height:auto;background:white}figcaption{font-size:12px;color:#60758f;text-align:center}.links{margin-top:18px;display:flex;gap:20px;flex-wrap:wrap}li{margin:7px 0}@media(max-width:850px){.layout{display:block}nav{position:static;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:8px 18px}section{padding:22px 18px}header h1{font-size:25px}table{min-width:620px}}@media print{header{color:#000;background:#fff;padding:0}header p{color:#333}nav{display:none}.layout{display:block;margin:0;padding:0}section{border:0;padding:0;break-before:page}h2,h3{break-after:avoid}table{font-size:10px}figure{break-inside:avoid}a{color:#000}}
+</style></head><body><header><h1>多系统 RBAC0 权限管理系统</h1><p>需求 · 原型 · API · 数据库 · 详细设计与任务分解</p><p>修订稿 V1.2 / 2026-10-21 / 仅多系统 RBAC0</p><div class="links"><a href="../prototype/vue/dist/index.html">打开Vue工程原型 ↗</a><a href="../api/openapi.json">OpenAPI 契约</a><a href="../database/data-dictionary.md">数据字典</a><a href="traceability.csv">需求追踪矩阵</a><a href="../validation/report.md">验证记录</a></div></header><div class="layout"><nav><a href="index.html">返回完整设计文档</a><a href="../README.adoc">交付包说明</a></nav><main><section><h2>RBAC0 六人详细功能设计分工</h2>
+<h3>只分详细功能设计</h3>
+<p>按老师顺序，需求分析、界面原型、API和数据库是共同输入，本分工只分下一步“详细功能设计（分解）”。每个人按业务功能写处理步骤、输入输出、函数、算法、事务与异常。</p>
+<p>不分配编码、测试用例或执行、编译、构建、部署、CI、JaCoCo，也不把前四步再分别交给某个人。第一次检查仍需实施交付，但不能算进这次六人详细设计分工。</p>
+<p>以下姓名暂用A—F。每人5份文件，共30份；文件路径相对交付包根目录。它们是需要成员完成的交付要求，当前尚未生成，不是已完成贡献记录。现有docs/06是共同底稿；公共约定已给在docs/detail-design/00-公共函数与依赖约定.adoc。个人文件不能只复制底稿或提交空模板。</p>
+<p>每人主设计和函数说明采用adoc；3张图提交可编辑puml，建议另导出同名SVG阅读。第一次采用面向功能的结构化设计，不强制每人另画一套继承类图。</p>
+<h3>分工总览</h3>
+<div class="table-scroll"><table><thead><tr><th>成员</th><th>主题</th><th>功能边界</th><th>对应需求/模块</th></tr></thead><tbody>
+<tr><td>A</td><td>认证、会话、个人账户</td><td>登录、登出、上下文切换、本人信息、改密、会话失效</td><td>FR-01/11；M01</td></tr>
+<tr><td>B</td><td>账号、子系统、成员</td><td>全局账号、系统创建初始化、系统启停、本地成员维护</td><td>FR-02—04；M02/M03</td></tr>
+<tr><td>C</td><td>角色与权限目录</td><td>角色和权限CRUD、菜单父链、引用检查、内置保护</td><td>FR-05/06；M04</td></tr>
+<tr><td>D</td><td>直接指派事务</td><td>成员角色UA、角色权限PA、差集、并发和委派</td><td>FR-07/08；M05</td></tr>
+<tr><td>E</td><td>权限求解、菜单、鉴权</td><td>有效权限、菜单投影、请求安全门、版本缓存</td><td>FR-09；M06及必要M00</td></tr>
+<tr><td>F</td><td>变更审计与查询</td><td>成功审计、失败安全事件、平台/系统日志查询与详情</td><td>FR-10；M07</td></tr>
+</tbody></table></div>
+<h3>A：认证、会话与个人账户</h3>
+<p>功能分解：A1规范化用户名/限流/凭据/锁定；A2平台与系统资格校验及创建会话；A3校验/退出/过期；A4上下文切换原子替换；A5本人信息及旧密码校验、改密、authVersion失效。本人权限和菜单调用E，不重复实现。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/A-认证会话与个人账户详细设计.adoc</td><td>范围和FR/P/API对应；前后置条件；登录、退出、切换、改密的正常与错误流程；会话与账号读写、失败计数、锁定到期、事务边界、密码脱敏；所选结构化方法和理由。</td></tr>
+<tr><td>docs/detail-design/A-函数说明.adoc</td><td>login、verifyCredentials、checkLoginLock、createSession、validateSession、switchContext、logout、getProfile、changePassword：逐个写设计签名、输入/返回/错误、依赖、读写表、伪代码。切换失败保留旧会话，改密成功失效全部旧会话。</td></tr>
+<tr><td>uml/detail-design/A-认证会话功能结构图.puml</td><td>认证入口逐层分到凭据、资格、会话、本人账户；体现调用关系和公共函数复用。</td></tr>
+<tr><td>uml/detail-design/A-登录与上下文切换流程图.puml</td><td>平台/系统分支、非成员、系统停用、账号停用、锁定、错误凭据、切换失败回滚及成功结果。</td></tr>
+<tr><td>uml/detail-design/A-改密与会话生命周期图.puml</td><td>ACTIVE→REVOKED/EXPIRED、authVersion变化；改密和成功审计的事务；区分全局停用与临时登录锁。</td></tr>
+</tbody></table></div>
+<p>交接：向E提供可信SessionContext与validateSession；从B读取账号/系统/成员状态；从F取得成功审计和失败安全事件端口。完成判据：能按文档走通普通用户登录、平台转系统和改密三条流程，并说明每种失败会改变或回滚哪些状态。</p>
+<h3>B：全局账号、子系统与成员</h3>
+<p>功能分解：B1全局账号查询/新建/更新及username唯一；B2最后平台管理员保护；B3系统查询/新建/编辑/启停和内置目录初始化；B4精确用户名加入成员、本地显示名/状态维护；B5全局/本地状态对授权与会话的影响。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/B-账号子系统与成员详细设计.adoc</td><td>FR-02—04、P03—05与12个资源接口的内部拆分；平台身份与本地成员的权限边界；初始化全部写入及失败原子性；成员版本和恢复启用语义。</td></tr>
+<tr><td>docs/detail-design/B-函数说明.adoc</td><td>listUsers、createUser、updateUser、ensureLastPlatformAdmin、createSystem、bootstrapSystem、updateSystem、addMember、updateMember、getMember等；参数/结果、唯一性、范围、版本、guard锁与根对象锁、读写表及伪代码。</td></tr>
+<tr><td>uml/detail-design/B-平台与成员功能结构图.puml</td><td>全局账号、子系统、本地成员三棵功能子树；区分平台写入口与系统写入口，公共状态查询独立。</td></tr>
+<tr><td>uml/detail-design/B-创建子系统初始化流程图.puml</td><td>system→固定权限→SYS_ADMIN→PA→成功审计→提交；失败全部回滚；首位管理员通过成员与指派用例建立，不新增私有API。</td></tr>
+<tr><td>uml/detail-design/B-账号与成员启停流程图.puml</td><td>全局停用与仅A系统成员停用的区别；最后管理员保护、旧版本冲突、authVersion/policyVersion、保留关联及恢复效果。</td></tr>
+</tbody></table></div>
+<p>交接：向A/E提供状态读取，向D提供成员归属与根version；目录规则参考C，指派规则调用D，审计调用F。完成判据：说明A成员停用为何不影响B、全局停用为何影响所有系统、两个平台管理员互相停用如何保持至少一人有效。</p>
+<h3>C：角色与权限目录</h3>
+<p>功能分解：C1角色查询/新建/编辑/启停/删除；C2权限MENU/ACTION定义；C3路由白名单、同系统MENU父节点与无环；C4UA/PA/子节点引用检查；C5内置保护、委派、状态变化和策略版本。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/C-角色权限目录详细设计.adoc</td><td>FR-05/06、P06/07及10个目录接口；编码系统内唯一且不可改；分页完整树装载；内置对象、停用恢复、删除引用、状态变更的事务和错误分支。</td></tr>
+<tr><td>docs/detail-design/C-函数说明.adoc</td><td>createRole、updateRole、deleteRole、createPermission、updatePermission、deletePermission、validateMenuParent、detectMenuCycle、checkReferences等；函数数据、返回、错误、终止条件、树遍历复杂度、表和锁内步骤。</td></tr>
+<tr><td>uml/detail-design/C-角色权限目录功能结构图.puml</td><td>角色维护、权限维护、菜单校验、引用检查；目录定义不负责D的集合指派或E的最终权限计算。</td></tr>
+<tr><td>uml/detail-design/C-菜单创建编辑流程图.puml</td><td>MENU/ACTION分支、路由必填/禁止、parent归属/类型、成环、版本冲突、审计回滚；每个结束节点写结果。</td></tr>
+<tr><td>uml/detail-design/C-目录删除与启停流程图.puml</td><td>受保护、有引用、可删除三分支；停用保留指派；system→根对象锁、根版本与policyVersion、审计原子性。</td></tr>
+</tbody></table></div>
+<p>交接：给D提供同系统角色/权限查询，给E提供菜单关系与有效目录；委派查询复用E，审计复用F。完成判据：演算A→B→A如何被拒绝、不同系统同编码是否允许、父菜单为何不产生权限继承、停用与删除的区别。</p>
+<h3>D：成员角色与角色权限直接指派</h3>
+<p>功能分解：D1集合与ETag及options读取；D2空集合/重复/排序规范化；D3所有候选同系统与有效性；D4旧/新集合委派与SYS_ADMIN保护；D5锁内重验、差集写入、版本、审计和回滚。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/D-直接指派事务详细设计.adoc</td><td>FR-07/08、P08/09及4个集合接口；原已选停用项仍返回；候选展示与提交校验分离；UA/PA分别用成员/角色根版本；清空、无变化和失败不部分成功。</td></tr>
+<tr><td>docs/detail-design/D-函数说明.adoc</td><td>getMemberRoles、getRolePermissions、buildAssignmentOptions、normalizeIds、validateAssignmentScope、validateDelegation、replaceMemberRoles、replaceRolePermissions、applyDifference；参数/返回/错误、锁前/锁内/提交后步骤、伪代码和数据读写。</td></tr>
+<tr><td>uml/detail-design/D-直接指派功能结构图.puml</td><td>读取集合→候选/规范化→事务→当前权限和对象检查→差集→版本/审计；两个用例的共用函数和不同根对象。</td></tr>
+<tr><td>uml/detail-design/D-成员角色替换时序图.puml</td><td>页面→接口→事务→system/member→E→UA→F→提交；旧ETag、跨系统ID、操作者被撤权、审计失败分支。</td></tr>
+<tr><td>uml/detail-design/D-角色权限替换流程图.puml</td><td>旧/新权限都校验委派；空、重复、无变化、停用、受保护；差集、版本和审计同提交，提交前不改缓存。</td></tr>
+</tbody></table></div>
+<p>交接：A/B/C给上下文和事实；D持有写事务并调用E当前权限、F事务审计。完成判据：手算old={1,2}、desired={2,3}的差集、版本、审计；解释同旧版本并发为何至多一笔成功，以及审计失败为何全部回滚。这里演算设计，不安排编写并发测试。</p>
+<h3>E：有效权限、菜单与统一鉴权</h3>
+<p>功能分解：E1有效UA→有效role→有效PA/permission并集去重；E2菜单与必要祖先容器投影；E3每请求会话/账号/系统/成员/上下文/权限/对象范围安全门；E4版本缓存、重试与故障回源；E5写事务当前权限与委派判定。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/E-权限求解菜单与鉴权详细设计.adoc</td><td>FR-09、me/permissions、me/menus和全部受保护端点的安全门；端点固定权限元数据与ALL语义；平台特权也绑定系统；无角色仍可访问本人中心；缓存和SQL隔离边界。</td></tr>
+<tr><td>docs/detail-design/E-函数说明.adoc</td><td>validateSecurityGate、resolvePermissions、resolveCurrentPermissionsInTransaction、authorize、buildMenus、checkDelegableSet、loadPolicyVersion、getPermissionSnapshot；输入/输出/错误、主库与缓存来源、去重、菜单排序、复杂度与伪代码。</td></tr>
+<tr><td>uml/detail-design/E-权限服务功能结构图.puml</td><td>会话验证复用A、事实读取复用B/C；只读求解、菜单、鉴权、委派；不反向调用D写入。</td></tr>
+<tr><td>uml/detail-design/E-请求鉴权与菜单流程图.puml</td><td>401/403/404/503各发生在哪一步；路径sysId与上下文匹配；对象查询保留sys_id；父容器可见但navigable=false。</td></tr>
+<tr><td>uml/detail-design/E-权限快照与缓存时序图.puml</td><td>读主库版本v→缓存v→求解→重读v→回填；版本变化重试、Redis故障回源、撤权提交与旧计算晚回填的交错。</td></tr>
+</tbody></table></div>
+<p>交接：向C/D提供委派与锁内当前权限端口，向页面提供codes/menus；依赖A/B/C的只读接口，拒绝事件给F。完成判据：演算同一用户在A/B不同集合，解释缓存命中为何仍查安全状态、旧缓存为何不能延长撤权；性能只设计目标，不安排压测。</p>
+<h3>F：变更审计、安全事件与查询</h3>
+<p>功能分解：F1成功审计字段/白名单脱敏/版本及前后集合；F2加入调用方现有事务；F3失败登录/拒绝访问的独立安全事件；F4平台/系统分页日志与详情；F5日期区间、历史快照与纯文本差异展示。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/F-审计记录与查询详细设计.adoc</td><td>FR-10、P10及4个查询接口、内部写端口；平台sysId=null含义；成功/失败事件分流；密码/token不记录；无修改删除日志接口；目标已停用/删除仍能读历史。</td></tr>
+<tr><td>docs/detail-design/F-函数说明.adoc</td><td>buildAuditChange、redactSnapshot、appendAuditInTransaction、recordSecurityEvent、normalizeAuditRange、queryAudit、getAuditDetail、buildAuditDiff；参数/返回/错误、白名单、事务归属、分页排序、UTC转换和伪代码。</td></tr>
+<tr><td>uml/detail-design/F-审计功能结构图.puml</td><td>成功记录、失败安全事件、范围查询、详情投影；调用方给事实，F不重新执行授权或修改UA/PA。</td></tr>
+<tr><td>uml/detail-design/F-同事务审计与回滚时序图.puml</td><td>D变更→F记录→共同提交；审计失败回滚关联和版本；失败安全事件独立记录，不能写成成功业务审计。</td></tr>
+<tr><td>uml/detail-design/F-审计范围查询流程图.puml</td><td>平台/系统身份、sysId、from/to成对、默认近7日、最多90自然日、结束日转次日零点、参数化查询、详情范围及文本转义。</td></tr>
+</tbody></table></div>
+<p>交接：给A/B/C/D提供事务审计，给A/E提供失败事件入口；只读查询接受E验证的上下文。完成判据：说明谁持有事务、谁触发回滚，提供脱敏前后集合样例，演算上海结束日期到UTC半开区间，说明null为何不是“查询全部”的通用参数。</p>
+<h3>每份文件写到什么程度</h3>
+<p>主设计统一章节：功能范围及FR/P/API/表引用；至少三级的功能分解；输入输出和前后置条件；正常与异常流程；数据访问及sys_id条件；事务与锁顺序；版本、状态和隔离；设计方法及理由；依赖端口；待决问题。</p>
+<p>函数说明逐个列：编号、函数名/设计签名、用途、参数类型与约束、结果结构、错误、调用者/被调用者、读写表、是否属于已有事务、关键伪代码。只有函数名或只有Controller/Service/Mapper目录不算详细设计。</p>
+<p>图中名称必须对应正文函数，并有入口、关键判断、失败返回和结束。设计引用现有OpenAPI和SQL，不重新定义字段；如发现契约缺口，记录影响交小组共同修订，不能私改接口。</p>
+<h3>设计依赖与互审</h3>
+<ol>
+<li>先共同读四项基线与公共约定；A/B/C/E/F对齐只读端口和数据，D同步写事务骨架。</li>
+<li>六人各交本人5份设计文件；不重复设计别人端口的内部算法。</li>
+<li>A↔B、C↔E、D↔F做设计互审，关注职责、异常、事务与方法理由。这是设计评审，不是软件测试任务或代码审查分工。</li>
+<li>交接时核对：A上下文给E；B/C事实给D/E；D锁内调E、同事务调F；E不反调D；F只记录事实。各自准备一条完整用例的设计说明，姓名和完成状态按事实填写。</li>
+</ol>
+<p>第一次检查还需要实际后端、服务器、JaCoCo和仓库提交，详见09。这些要求保留在总检查清单中，但不分给这六人的本轮详细功能设计份额。</p></section></main></div></body></html>
