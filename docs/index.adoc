@@ -23,3 +23,5 @@ include::07-RBAC0六人分工.adoc[leveloffset=+1]
 include::08-验收与评审清单.adoc[leveloffset=+1]
 
 include::09-第一次检查要求与前四步复核.adoc[leveloffset=+1]
+
+include::10-第一次检查后端联调与现场演示.adoc[leveloffset=+1]

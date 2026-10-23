@@ -1,0 +1,80 @@
+= E：权限求解、菜单与统一鉴权详细设计
+
+== 设计范围
+
+本模块覆盖 FR-09 与 M00/M06：有效权限求解、动态菜单投影、每个受保护请求的统一安全门、权限版本缓存和授权事务内的权限判定。代码基线位于 `backend/src/main/java/com/example/rbac`：
+
+* `security/SessionGate`：会话、账号、系统、成员与版本安全门。
+* `security/AuthorizationInterceptor`：静态端点权限元数据校验。
+* `rbac/PermissionService`：有效权限、菜单和缓存。
+* `rbac/RbacService`：角色/权限/成员授权事务与委派校验。
+
+本模块只读取 B/C/D 已提交的权限事实，不反向调用会修改 `iam_user_role`、`iam_role_permission` 的业务服务。
+
+== 权限模型
+
+RBAC0 关系为：
+
+[source,text]
+----
+User -> iam_member(sys_id,user_id,status)
+     -> iam_user_role(sys_id,user_id,role_id)
+     -> iam_role(sys_id,id,status)
+     -> iam_role_permission(sys_id,role_id,permission_id)
+     -> iam_permission(sys_id,id,status,type,code,parent_id)
+----
+
+有效权限是用户直接角色的并集，不存在角色继承、互斥、先决角色或基数约束。MENU 与 ACTION 都进入 `permissionCodes`；HTTP 接口拦截只使用 ACTION 码。
+
+== 安全门
+
+每个 `/api/v1/**` 受保护请求依次执行：
+
+. 解析 `Authorization: Bearer <sessionId>`，缺失或格式错误返回 401。
+. 读取 `iam_session`，校验未撤销、未过期。
+. 联读 `iam_user`，校验账号 ENABLED 且 `session.auth_version = user.auth_version`。
+. 系统上下文非空时校验 `iam_system.status=ENABLED`。
+. 非平台管理员还必须存在 ENABLED 的 `iam_member`；平台管理员只获得当前绑定系统已注册权限，不跨系统读取对象。
+. 路径 `{sysId}` 必须等于会话 `sysId`，否则 403。
+. 读取处理器上的 `@RequirePermission` 静态元数据，在目标系统执行有效权限判定。
+. Controller 的每条对象 SQL 仍显式携带 `sys_id`，拦截器不替代对象范围隔离。
+
+状态码边界：未认证 401；跨系统、成员/账号停用、缺少权限 403；当前范围对象不存在 404；`If-Match` 缺失 428、版本冲突 412；权限事实读取失败 503。
+
+== 有效权限求解
+
+输入 `SessionContext` 后读取系统 `policy_version = v1`，执行去重查询得到权限码与直接角色 ID，再读取版本 `v2`：
+
+* `v1 = v2`：快照一致，可返回并写缓存。
+* `v1 != v2`：丢弃当前结果，重试一次。
+* 重试后仍变化：返回 503，禁止拼接两个版本的结果。
+
+缓存键为 `perm:{sysId}:{userId}:{policyVersion}`，TTL 默认 60 秒。安全门每请求仍读取会话/账号/系统/成员状态；撤权提交后系统策略版本递增，新请求自然改用新键，因此旧缓存不能延长撤权。缓存只保存权限事实，不保存会话有效性。
+
+== 菜单投影
+
+菜单生成以当前系统所有 ENABLED MENU 为目录，以有效权限码为授权事实：
+
+. 直接授权的 MENU 标记 `navigable=true`。
+. 只作为祖先被补入的 MENU 标记 `navigable=false`。
+. 若只授权 ACTION，则补其父 MENU 容器，但容器不可导航。
+. 按 `sort_order, id` 排序；子节点递归构建。
+. 防环集合在递归期间维护，发现环时返回冲突错误。
+
+菜单父子关系不产生隐式授权，只影响展示层级。
+
+== 写事务与委派
+
+角色权限替换、成员角色替换都在单事务内完成：
+
+. 读取根资源并校验 `If-Match` 版本。
+. 校验全部 ID 属于同一 `sys_id`。
+. 非平台管理员不得指派内置 `SYS_ADMIN`。
+. 集合无变化时不递增版本、不制造审计。
+. 有变化时替换关联行、递增根资源版本和 `iam_system.policy_version`、写审计，再共同提交。
+
+== 复杂度与取舍
+
+设用户有效角色数为 Ru、有效权限数为 Pu：求解 SQL 与去重为 O(Ru+Pu)，内存集合为 O(Pu)。菜单树构建为 O(P log P)。缓存只移除跨请求重复求解，不宣称安全门零数据库访问。
+
+当前实现使用进程内缓存，适用于第一次检查的单实例演示；多实例部署时应替换为 Redis，但键、版本校验和回源语义保持不变。

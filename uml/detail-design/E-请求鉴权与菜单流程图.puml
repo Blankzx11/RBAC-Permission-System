@@ -1,0 +1,44 @@
+@startuml
+title 请求鉴权与菜单生成流程
+start
+:收到 /api/v1/** 请求;
+if (Bearer token 存在?) then (否)
+  :返回 401;
+  stop
+endif
+:读取 session + user + system + member;
+if (会话过期/撤销/authVersion 不一致?) then (是)
+  :返回 401;
+  stop
+endif
+if (系统上下文有效且成员启用?) then (否)
+  :返回 403;
+  stop
+endif
+if (路径 sysId 与会话一致?) then (否)
+  :返回 403;
+  stop
+endif
+if (端点声明 @RequirePermission?) then (是)
+  :loadPolicyVersion;
+  :读取版本化有效权限集合;
+  :authorize(requiredCode);
+  if (权限存在?) then (否)
+    :返回 403;
+    stop
+  endif
+endif
+:Controller 查询对象，SQL 强制 sysId;
+if (对象不存在?) then (是)
+  :返回 404;
+  stop
+endif
+if (请求 /me/menus?) then (是)
+  :筛选 MENU 权限;
+  :为 ACTION 补父菜单;
+  :递归补祖先并标记 navigable;
+  :按 sortOrder,id 排序;
+endif
+:返回 data + requestId;
+stop
+@enduml

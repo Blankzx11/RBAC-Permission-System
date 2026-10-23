@@ -1,0 +1,36 @@
+@startuml
+title 权限快照、缓存与撤权时序
+participant "请求" as R
+participant "SessionGate" as G
+participant "PermissionService" as P
+database "MySQL" as DB
+participant "本地缓存" as C
+
+R -> G: Bearer token + path sysId
+G -> DB: 查 session/user/system/member
+DB --> G: 当前安全状态
+G --> R: SessionContext
+R -> P: authorize(code) / resolve()
+P -> DB: loadPolicyVersion -> v1
+P -> C: get(perm:sys:user:v1)
+alt 命中且未过期
+  C --> P: codes
+else 未命中
+  P -> DB: 查有效 UA -> role -> PA -> permission
+  DB --> P: codes / roleIds
+  P -> DB: 再读 policyVersion -> v2
+  alt v2 == v1
+    P -> C: put(key(v1), codes)
+  else 版本变化
+    P -> DB: 重试一次
+    alt 仍变化
+      P --> R: 503
+    end
+  end
+end
+P --> R: 判定 / 快照
+note over DB, C
+撤权提交时 policy_version 从 v 变为 v+1。
+新请求使用新键，旧键即使尚未过期也不会命中。
+end note
+@enduml
