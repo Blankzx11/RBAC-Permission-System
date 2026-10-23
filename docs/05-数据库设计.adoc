@@ -1,0 +1,69 @@
+= 数据库设计
+:imagesdir: images
+
+== 模型和范式
+
+数据库方言为 MySQL 8.0.16+ InnoDB，UTF8MB4，连接 session time_zone 固定 +00:00。RBAC0 的建表脚本是独立新库的非破坏性脚本，不包含 DROP；不替代已有库迁移。本版没有模型扩展迁移。示例数据只用于新建开发库，不写可登录的真实密码。
+
+image::er.svg[多系统 RBAC0 实体关系]
+
+用户与系统通过成员表多对多，成员与角色通过用户角色表多对多，角色与权限通过角色权限表多对多。角色、权限拥有 sys_id，关联使用复合外键。例如 `(sys_id,role_id)` 只能引用相同系统角色；这是应用漏写检查时的第二道边界。
+
+1NF：ID、名称、状态均为单值；权限 ID 不用逗号字符串保存。2NF：关联表的指派时间依赖完整复合键；成员显示名依赖 (sys_id,user_id)，不能放全局账号。3NF：账号密码、角色名称、系统名称分别保存在所属实体，不在授权表复制。审计的 before/after JSON 是不可变历史快照，刻意冗余，不能拿来做当前权限事实表。缓存是派生数据，不是权威授权源。
+
+== RBAC0 表清单
+
+[cols="2,3,3",options="header"]
+|===
+|表 |职责 |关键约束
+|iam_platform_guard |平台级写入串行锁 |单行 id=1；全局管理员保护和平台全局修改先锁此行。
+|iam_user |全局账号和凭据 |username 唯一、二进制排序；password_hash 不可空；auth_version 与 version 分开。
+|iam_system |业务子系统与策略版本 |code 唯一，policy_version 单调递增；状态启停不物理删除。
+|iam_member |用户在系统内资格 |主键 (sys_id,user_id)，外键用户和系统；成员本地状态。
+|iam_role |系统角色 |主键 id，唯一 (sys_id,id) 供复合引用，唯一 (sys_id,code)；builtin。
+|iam_permission |菜单和逻辑操作 |唯一 (sys_id,code)、复合父节点外键，MENU/ACTION 类型和字段 CHECK。
+|iam_user_role |成员角色集合 |主键 (sys_id,user_id,role_id)，复合外键 member、role；反向索引。
+|iam_role_permission |角色权限集合 |主键 (sys_id,role_id,permission_id)，复合外键 role、permission。
+|iam_session |服务端会话和撤销状态 |session_id 唯一；user_id 外键；平台上下文 sys_id 可空；expires_at、revoked_at、auth_version。
+|iam_audit_log |成功业务变更审计 |sys_id 可空代表平台，actor_id 与 actor_name 快照、target_type、target_id、before_json、after_json、request_id。
+|iam_login_log |登录尝试与拒绝安全事件 |user_id 可空、username 脱敏快照、sys_id、outcome、reason、ip、request_id、created_at。
+|===
+
+完整字段类型、长度、空值、默认值、主外键和索引见 `database/001_rbac0.sql`；生成的 `database/data-dictionary.md` 逐字段说明。所有业务表的 ID 为服务端生成正 BIGINT，API 转字符串。带 created_by 的表允许初始化时为空；不存在的字段不作为公共约定，不对历史操作人做级联删除。
+
+== 重点完整性规则
+
+. 用户角色同时引用成员和角色，不可让非成员凭空获得角色；只填全局 user_id 不足以建立子系统授权。
+. 子权限必须引用同系统 MENU；数据库复合外键保证同系统，MENU 类型与无环由事务用例在系统锁内校验。
+. 关联对象不使用 ON DELETE CASCADE；删除角色前显式解除业务引用并审计，默认 RESTRICT 保留安全边界。
+. 账号、系统、成员不物理删除，审计不依赖活跃业务行才能读出历史快照。
+. DB 应用账号没有 audit 的 UPDATE/DELETE 权限；迁移/运维账号独立。默认脚本提供表结构，权限配置由部署模块完成。
+. 状态、类型、非负排序、会话到期时间等本地规则用 CHECK；跨行规则（最后管理员、菜单父链无环）由锁内事务保证。
+
+== 索引与查询路径
+
+`iam_user(username)` 支持登录及精确添加成员；用户模糊检索不承诺 `%keyword%` 走 BTree，10 万级演示可接受，性能不满足再限制为前缀或引入检索方案。
+
+成员按 `(sys_id,status,user_id)` 过滤分页，角色按 `(sys_id,status,id)`，权限按 `(sys_id,parent_id,sort_order,id)` 排导航。UA 的主键便于查询用户所有角色，`(sys_id,role_id,user_id)` 用于查询某角色的受影响成员。PA 双方向索引用于权限求解和引用检测。日志 `(sys_id,created_at,id)` 与 `(sys_id,actor_id,created_at,id)` 支持系统审计。
+
+分页默认 offset，限制最大 pageSize；日志需要深分页时增加 `(created_at,id)` 游标，不先承诺 offset 第百万页的性能。每种索引的价值应使用 EXPLAIN 和真实分布验证，不凭索引名宣称已经优化。
+
+== 一致性与事务
+
+子系统权限相关写入统一顺序：锁 iam_system 行 → 锁目标 member/role/permission → 校验版本和操作者当前权限 → 写关联差集 → 递增根 version 与 system.policy_version → 写脱敏审计 → 提交。全系统序列化写入适合“读多写少”的权限控制台，限制是同一系统大量写入会排队，需压测后再细分锁；不以复杂度换未经证明的吞吐收益。
+
+全局账号修改先锁 platform_guard，再锁 user，状态或密码变化递增 auth_version。子系统事务只读用户安全状态，避免反向获取 platform_guard。平台系统修改遵守 guard → system，子系统写遵守 system → 根对象；全局停用与子系统写允许先后提交，但鉴权从主库读取停用状态，不会继续生效。
+
+读取权限缓存时先读主库安全门和 policy_version=v，求解前后重读版本；若变化则重试一次。快照只允许写入 v 对应键。旧计算晚回填也只污染旧键，下一请求读新版本不会命中旧键。禁止“读旧数据后使用最新版本号写缓存”。
+
+== 生命周期与演示数据
+
+001 只建 RBAC0 表；003 提供 2 个系统、5 个账号、每系统 SYS_ADMIN 与业务角色、菜单和操作、跨系统差异指派。密码字段是明确的禁止登录占位值；后端初始化器需从本地安全配置读取初始密码并生成哈希，不能把演示 HTML 的身份选择当作真实凭据。
+
+归档策略建议：操作日志在线保留 180 天，登录安全日志 90 天；这是项目建议而非已核实法规。定期归档和清理需部署时明确权限及审计，业务 API 不提供删除日志。备份恢复后重建或清空 Redis 权限缓存，再验证 policy_version。
+
+== SQL 实际检查入口
+
+001 和 003 都显式设置会话 time_zone 为 +00:00。003 仅为新开发库种子，不能重复覆盖已有数据。004_rbac0_review.sql 为只读核对脚本，检查11张表、5个账号、2个系统、8个成员、8个角色、36个权限、6条用户角色、54条角色权限和1条演示审计，并查询孤立或跨系统关联。
+
+本次环境未提供 MySQL 可执行服务，未宣称脚本已在目标数据库执行。外键、CHECK、事务和并发规则仍需在部署数据库按验收清单运行验证。浏览器原型不读取 MySQL。

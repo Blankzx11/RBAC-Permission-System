@@ -1,0 +1,11 @@
+= Vue 3 / TypeScript / Tailwind 原型工程
+
+直接用浏览器打开dist/index.html，Vue及样式均已打包在本地，无CDN或网络依赖。开发时先npm ci，再npm run dev；复建执行npm run build。package-lock.json固定本次实际依赖，npm ci使用该锁文件。建议Node 22.12+或本次使用的Node24。
+
+这是增量工程化的评审原型：Vue单文件组件与TypeScript负责宿主、生命周期、身份摘要、评审开关及类型化引擎边界；Tailwind通过Vite编译。已有业务页面和交互复用prototype/app.js的JavaScript DOM引擎，构建前生成src/engine.js和legacy.css，避免复制维护两套业务规则。不是全量TypeScript重写，也不是生产Vue前端或后端。
+
+源文件：src/App.vue、main.ts、types.ts、engine.d.ts、style.css；共享行为源在上一层app.js/demo-data.js/index.html；scripts/prepare.mjs生成适配引擎。npm run typecheck检查Vue/TS边界，JavaScript引擎内部没有进行静态类型迁移，不能将其描述为全业务严格类型检查通过。
+
+演示功能与兼容HTML版一致：登录、平台/系统切换、账号/系统/成员/角色/权限维护、两类授权、权限生效和审计。账号口令DemoOnly12345仅在页面内存模拟，刷新重置。评审开关只展示API设计注释，没有发送真实请求。
+
+编译方案参考官方文档：https://vite.dev/guide/build.html[Vite library mode]、https://tailwindcss.com/docs/installation/using-vite[Tailwind Vite集成]、https://vuejs.org/guide/typescript/overview.html[Vue TypeScript说明]。这些工具用法不是教师评分条文。

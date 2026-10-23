@@ -1,0 +1,6 @@
+{
+  "name": "rbac0-design-validation",
+  "private": true,
+  "version": "1.2.0",
+  "devDependencies": { "@apidevtools/swagger-parser": "12.1.0" }
+}

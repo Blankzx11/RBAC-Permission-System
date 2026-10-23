@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-21T10:48:14.371Z",
+  "tool": "@apidevtools/swagger-parser",
+  "scope": "OpenAPI schema and internal references only",
+  "passed": true,
+  "inputSha256": "be3dbd366bb60b844c409fef5b746ec76559c6be8f50a0228b0490bee9fd5b22",
+  "openapi": "3.0.3",
+  "version": "1.2.0",
+  "operations": 38
+}
