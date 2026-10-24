@@ -1,0 +1,21 @@
+@startuml
+actor 管理员 as A
+participant API
+participant M05
+database MySQL as DB
+A -> API: PUT roleIds + If-Match
+API -> M05: 可信SysContext
+M05 -> DB: BEGIN / lock system / lock member
+M05 -> DB: 当前读重验操作者权限与版本
+M05 -> M05: 归属、委派、候选集合、版本
+alt 验证失败
+M05 -> DB: ROLLBACK
+M05 --> API: 403/404/409/412
+else 合法
+M05 -> DB: 差集 / version+1 / policyVersion+1
+M05 -> DB: INSERT before-after audit
+M05 -> DB: COMMIT
+M05 --> API: final roleIds + ETag
+end
+API --> A: HTTP + requestId
+@enduml

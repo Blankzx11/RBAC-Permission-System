@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditHttpErrors.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.web</a> &gt; <span class="el_source">AuditHttpErrors.java</span></div><h1>AuditHttpErrors.java</h1><pre class="source lang-java linenums">package com.rbac.audit.web;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rbac.audit.domain.SecurityEvent;
+import com.rbac.audit.port.SecurityEventRecorder;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Component;
+import java.io.IOException;
+import java.util.Map;
+
+@Component
+public class AuditHttpErrors {
+    private final ObjectMapper mapper;
+    private final SecurityEventRecorder recorder;
+
+<span class="fc" id="L19">    public AuditHttpErrors(ObjectMapper mapper, SecurityEventRecorder recorder) { this.mapper = mapper; this.recorder = recorder; }</span>
+
+    public void unauthenticated(HttpServletRequest request, HttpServletResponse response, AuthenticationException ignored) throws IOException {
+<span class="fc" id="L22">        write(request, response, 401, &quot;UNAUTHENTICATED&quot;, &quot;请先登录&quot;);</span>
+<span class="fc" id="L23">    }</span>
+
+    public void demoLoginFailed(HttpServletRequest request, HttpServletResponse response, AuthenticationException failure) throws IOException {
+        // 不解析Authorization头，避免误把凭据复制到安全日志。
+<span class="fc" id="L27">        recorder.recordSecurityEvent(new SecurityEvent(null, &quot;unknown&quot;, null, SecurityEvent.Reason.BAD_CREDENTIALS,</span>
+<span class="fc" id="L28">            RequestContextFilter.requestId(request), request.getRemoteAddr()));</span>
+<span class="fc" id="L29">        unauthenticated(request, response, failure);</span>
+<span class="fc" id="L30">    }</span>
+
+    public void forbidden(HttpServletRequest request, HttpServletResponse response, AccessDeniedException ignored) throws IOException {
+<span class="nc" id="L33">        write(request, response, 403, &quot;FORBIDDEN&quot;, &quot;没有访问权限&quot;);</span>
+<span class="nc" id="L34">    }</span>
+
+    private void write(HttpServletRequest request, HttpServletResponse response, int status, String code, String message) throws IOException {
+<span class="fc" id="L37">        response.setStatus(status);</span>
+<span class="fc" id="L38">        response.setContentType(&quot;application/json;charset=UTF-8&quot;);</span>
+<span class="fc" id="L39">        mapper.writeValue(response.getOutputStream(), new ApiModels.Error(code, message, RequestContextFilter.requestId(request), Map.of()));</span>
+<span class="fc" id="L40">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

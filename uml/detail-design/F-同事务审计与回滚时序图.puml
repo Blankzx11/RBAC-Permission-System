@@ -1,0 +1,32 @@
+@startuml
+title 成功审计同事务与失败安全事件分流
+actor 调用方
+participant "D事务用例" as D
+participant "AuditWriter代理" as Writer
+participant "AuditFunctions" as Pure
+database "业务与审计数据库" as DB
+participant "SecurityEventRecorder" as Recorder
+participant "SecurityEventStore代理" as Store
+调用方 -> D : 变更业务
+D -> DB : BEGIN / 写关联与版本
+D -> Writer : appendInCurrentTransaction(change)
+Writer -> Pure : redactSnapshot / 规范化
+alt 审计成功
+  Writer -> DB : INSERT iam_audit_log (同连接)
+  Writer --> D : 完成
+  D -> DB : COMMIT 业务与审计
+else 审计失败或快照无效
+  Writer --> D : 抛异常，事务标记rollback-only
+  D -> DB : ROLLBACK 业务、版本与审计
+end
+调用方 -> Recorder : recordSecurityEvent(拒绝事件)
+Recorder -> Store : appendInNewTransaction
+Store -> DB : REQUIRES_NEW / INSERT iam_login_log
+alt 独立记录成功
+  Store -> DB : COMMIT
+  Recorder --> 调用方 : true (不受外层回滚影响)
+else 独立记录失败
+  Store -> DB : ROLLBACK
+  Recorder --> 调用方 : false / 固定告警，仍保持拒绝
+end
+@enduml

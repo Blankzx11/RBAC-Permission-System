@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CurrentAuditActor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.web</a> &gt; <span class="el_source">CurrentAuditActor.java</span></div><h1>CurrentAuditActor.java</h1><pre class="source lang-java linenums">package com.rbac.audit.web;
+
+import com.rbac.audit.domain.AuditActor;
+import com.rbac.audit.domain.AuditFailure;
+import com.rbac.audit.port.AuditIdentity;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+
+@Component
+<span class="fc" id="L11">public class CurrentAuditActor {</span>
+    public AuditActor current(HttpServletRequest request) {
+<span class="fc" id="L13">        var authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+<span class="pc bpc" id="L14" title="2 of 6 branches missed.">        if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof AuditIdentity identity))</span>
+<span class="fc" id="L15">            throw new AuditFailure(401, &quot;UNAUTHENTICATED&quot;, &quot;需要认证模块提供有效的审计身份&quot;);</span>
+        // 不从X-User、X-SysId或X-Forwarded-For等客户端头读取身份和来源事实。
+<span class="fc" id="L17">        return new AuditActor(identity.userId(), identity.displayName(), identity.sysId(), identity.platformAdmin(),</span>
+<span class="fc" id="L18">            identity.permissionCodes(), RequestContextFilter.requestId(request), request.getRemoteAddr());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

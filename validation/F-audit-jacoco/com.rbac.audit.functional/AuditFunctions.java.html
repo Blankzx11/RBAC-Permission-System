@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditFunctions.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.functional</a> &gt; <span class="el_source">AuditFunctions.java</span></div><h1>AuditFunctions.java</h1><pre class="source lang-java linenums">package com.rbac.audit.functional;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.rbac.audit.domain.AuditChange.TargetType;
+import com.rbac.audit.domain.AuditFailure;
+import com.rbac.audit.domain.AuditQuery;
+import java.nio.charset.StandardCharsets;
+import java.time.*;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/** 无数据库、网络和系统时间读取；相同输入始终得到相同结果。 */
+public final class AuditFunctions {
+<span class="fc" id="L17">    public static final ZoneId SHANGHAI = ZoneId.of(&quot;Asia/Shanghai&quot;);</span>
+<span class="fc" id="L18">    private static final JsonNodeFactory JSON = JsonNodeFactory.instance;</span>
+<span class="fc" id="L19">    private static final Instant MIN_DATABASE_TIME = Instant.parse(&quot;1000-01-01T00:00:00Z&quot;);</span>
+<span class="fc" id="L20">    private static final Instant MAX_DATABASE_TIME = Instant.parse(&quot;+10000-01-01T00:00:00Z&quot;);</span>
+<span class="fc" id="L21">    private static final Set&lt;String&gt; ID_FIELDS = Set.of(&quot;id&quot;, &quot;sysId&quot;, &quot;userId&quot;, &quot;parentId&quot;, &quot;version&quot;, &quot;policyVersion&quot;);</span>
+<span class="fc" id="L22">    private static final Set&lt;String&gt; BOOL_FIELDS = Set.of(&quot;platformAdmin&quot;, &quot;builtin&quot;, &quot;credentialChanged&quot;);</span>
+<span class="fc" id="L23">    private static final Map&lt;TargetType, Set&lt;String&gt;&gt; FIELDS = Map.of(</span>
+<span class="fc" id="L24">        TargetType.USER, Set.of(&quot;id&quot;, &quot;username&quot;, &quot;displayName&quot;, &quot;status&quot;, &quot;platformAdmin&quot;, &quot;version&quot;, &quot;credentialChanged&quot;),</span>
+<span class="fc" id="L25">        TargetType.SYSTEM, Set.of(&quot;id&quot;, &quot;code&quot;, &quot;name&quot;, &quot;description&quot;, &quot;status&quot;, &quot;version&quot;, &quot;policyVersion&quot;),</span>
+<span class="fc" id="L26">        TargetType.MEMBER, Set.of(&quot;userId&quot;, &quot;sysId&quot;, &quot;displayName&quot;, &quot;status&quot;, &quot;roleIds&quot;, &quot;version&quot;),</span>
+<span class="fc" id="L27">        TargetType.ROLE, Set.of(&quot;id&quot;, &quot;sysId&quot;, &quot;code&quot;, &quot;name&quot;, &quot;description&quot;, &quot;builtin&quot;, &quot;status&quot;, &quot;permissionIds&quot;, &quot;version&quot;),</span>
+<span class="fc" id="L28">        TargetType.PERMISSION, Set.of(&quot;id&quot;, &quot;sysId&quot;, &quot;code&quot;, &quot;name&quot;, &quot;type&quot;, &quot;parentId&quot;, &quot;routePath&quot;, &quot;sortOrder&quot;, &quot;status&quot;, &quot;version&quot;)</span>
+    );
+
+    private AuditFunctions() { }
+
+    public static long positiveId(String value, String field) {
+<span class="pc bpc" id="L34" title="1 of 4 branches missed.">        if (value == null || !value.matches(&quot;[1-9][0-9]{0,18}&quot;)) throw AuditFailure.invalid(field + &quot;必须是正BIGINT字符串&quot;);</span>
+<span class="fc" id="L35">        try { return Long.parseLong(value); }</span>
+<span class="fc" id="L36">        catch (NumberFormatException ex) { throw AuditFailure.invalid(field + &quot;超出BIGINT范围&quot;); }</span>
+    }
+
+    public static AuditQuery.Range normalizeAuditRange(Instant from, Instant to, Instant now) {
+<span class="fc bfc" id="L40" title="All 6 branches covered.">        if ((from == null) != (to == null)) throw AuditFailure.invalid(&quot;from和to必须成对提供&quot;);</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">        if (from == null) {</span>
+<span class="fc" id="L42">            LocalDate today = now.atZone(SHANGHAI).toLocalDate();</span>
+<span class="fc" id="L43">            return new AuditQuery.Range(today.minusDays(6).atStartOfDay(SHANGHAI).toInstant(), today.plusDays(1).atStartOfDay(SHANGHAI).toInstant());</span>
+        }
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        if (!from.isBefore(to)) throw AuditFailure.invalid(&quot;from必须早于to&quot;);</span>
+<span class="pc bpc" id="L46" title="2 of 4 branches missed.">        if (from.isBefore(MIN_DATABASE_TIME) || !to.isBefore(MAX_DATABASE_TIME))</span>
+<span class="nc" id="L47">            throw AuditFailure.invalid(&quot;时间超出数据库可表示范围&quot;);</span>
+<span class="fc" id="L48">        LocalDate first = from.atZone(SHANGHAI).toLocalDate();</span>
+<span class="fc" id="L49">        LocalDate last = to.minusNanos(1).atZone(SHANGHAI).toLocalDate();</span>
+<span class="pc bpc" id="L50" title="2 of 6 branches missed.">        if (first.getYear() &lt; 1000 || last.getYear() &gt; 9999 || ChronoUnit.DAYS.between(first, last) + 1 &gt; 90)</span>
+<span class="fc" id="L51">            throw AuditFailure.invalid(&quot;单次查询最多覆盖90个上海时区自然日&quot;);</span>
+<span class="fc" id="L52">        return new AuditQuery.Range(from, to);</span>
+    }
+
+    public static AuditQuery.Criteria normalizeQuery(com.rbac.audit.domain.AuditScope scope, AuditQuery.Input input, Instant now) {
+<span class="fc bfc" id="L56" title="All 6 branches covered.">        if (input.page() &lt; 1 || input.pageSize() &lt; 1 || input.pageSize() &gt; 100) throw AuditFailure.invalid(&quot;page至少为1，pageSize为1至100&quot;);</span>
+<span class="pc bpc" id="L57" title="1 of 4 branches missed.">        if (input.actorId() != null &amp;&amp; input.actorId() &lt;= 0) throw AuditFailure.invalid(&quot;actorId无效&quot;);</span>
+<span class="fc" id="L58">        String action = input.action();</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        if (&quot;&quot;.equals(action)) action = null;</span>
+<span class="pc bpc" id="L60" title="2 of 8 branches missed.">        if (action != null &amp;&amp; (action.length() &gt; 64 || action.isBlank() || !cleanText(action, 64).equals(action)))</span>
+<span class="fc" id="L61">            throw AuditFailure.invalid(&quot;action必须是1至64个可见字符&quot;);</span>
+<span class="fc" id="L62">        return new AuditQuery.Criteria(scope, normalizeAuditRange(input.from(), input.to(), now), input.actorId(), action, input.page(), input.pageSize());</span>
+    }
+
+    public static JsonNode redactSnapshot(TargetType type, JsonNode input) {
+<span class="pc bpc" id="L66" title="2 of 4 branches missed.">        if (input == null || input.isNull()) return null;</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (!input.isObject()) throw AuditFailure.invalid(&quot;审计快照必须是对象或null&quot;);</span>
+<span class="fc" id="L68">        ObjectNode result = JSON.objectNode();</span>
+<span class="fc" id="L69">        input.fieldNames().forEachRemaining(key -&gt; {</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">            if (!FIELDS.get(type).contains(key)) return;</span>
+<span class="fc" id="L71">            JsonNode value = input.get(key);</span>
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">            if (value.isNull()) { result.putNull(key); return; }</span>
+<span class="pc bpc" id="L73" title="1 of 4 branches missed.">            if (key.equals(&quot;roleIds&quot;) || key.equals(&quot;permissionIds&quot;)) {</span>
+<span class="pc bpc" id="L74" title="2 of 4 branches missed.">                if (!value.isArray() || value.size() &gt; 1000) throw AuditFailure.invalid(&quot;审计ID集合无效&quot;);</span>
+<span class="fc" id="L75">                TreeSet&lt;Long&gt; ids = new TreeSet&lt;&gt;();</span>
+<span class="pc bpc" id="L76" title="1 of 4 branches missed.">                value.forEach(node -&gt; { if (!node.isTextual() &amp;&amp; !node.isIntegralNumber()) throw AuditFailure.invalid(&quot;审计ID必须为整数或字符串&quot;); ids.add(positiveId(node.asText(), key)); });</span>
+<span class="fc" id="L77">                var array = result.putArray(key); ids.forEach(id -&gt; array.add(Long.toString(id))); return;</span>
+            }
+<span class="fc bfc" id="L79" title="All 2 branches covered.">            if (ID_FIELDS.contains(key)) {</span>
+<span class="pc bpc" id="L80" title="2 of 4 branches missed.">                if (!value.isTextual() &amp;&amp; !value.isIntegralNumber()) throw AuditFailure.invalid(&quot;审计ID或版本类型错误&quot;);</span>
+<span class="fc" id="L81">                result.put(key, Long.toString(positiveId(value.asText(), key))); return;</span>
+            }
+<span class="fc bfc" id="L83" title="All 2 branches covered.">            if (BOOL_FIELDS.contains(key)) {</span>
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">                if (!value.isBoolean()) throw AuditFailure.invalid(&quot;审计布尔字段类型错误&quot;);</span>
+<span class="nc" id="L85">                result.put(key, value.booleanValue()); return;</span>
+            }
+<span class="fc bfc" id="L87" title="All 2 branches covered.">            if (key.equals(&quot;sortOrder&quot;)) {</span>
+<span class="pc bpc" id="L88" title="5 of 8 branches missed.">                if (!value.isIntegralNumber() || !value.canConvertToInt() || value.intValue() &lt; 0 || value.intValue() &gt; 9999) throw AuditFailure.invalid(&quot;审计排序字段无效&quot;);</span>
+<span class="nc" id="L89">                result.put(key, value.intValue()); return;</span>
+            }
+<span class="fc bfc" id="L91" title="All 2 branches covered.">            if (!value.isTextual()) throw AuditFailure.invalid(&quot;审计文本字段不接受嵌套对象&quot;);</span>
+<span class="pc bpc" id="L92" title="3 of 6 branches missed.">            int max = key.equals(&quot;description&quot;) ? 500 : key.equals(&quot;routePath&quot;) ? 200 : key.equals(&quot;code&quot;) ? 80 : 64;</span>
+<span class="fc" id="L93">            result.put(key, cleanText(value.textValue(), max));</span>
+<span class="fc" id="L94">        });</span>
+<span class="pc bpc" id="L95" title="1 of 2 branches missed.">        if (result.toString().getBytes(StandardCharsets.UTF_8).length &gt; 65536) throw AuditFailure.invalid(&quot;审计快照过大&quot;);</span>
+<span class="fc" id="L96">        return result;</span>
+    }
+
+    public static String cleanText(String value, int maxCodePoints) {
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">        if (value == null) return &quot;&quot;;</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        return value.codePoints().filter(c -&gt; !Character.isISOControl(c)).limit(maxCodePoints)</span>
+<span class="fc" id="L102">            .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();</span>
+    }
+
+    public static String maskUsername(String username) {
+<span class="fc" id="L106">        int[] points = cleanText(username, 32).codePoints().toArray();</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        if (points.length == 0) return &quot;***&quot;;</span>
+<span class="pc bpc" id="L108" title="1 of 2 branches missed.">        return new String(points, 0, 1) + &quot;***&quot; + (points.length &gt; 1 ? new String(points, points.length - 1, 1) : &quot;&quot;);</span>
+    }
+
+    public static List&lt;AuditQuery.Difference&gt; buildAuditDiff(JsonNode before, JsonNode after) {
+<span class="fc" id="L112">        Set&lt;String&gt; fields = new TreeSet&lt;&gt;();</span>
+<span class="pc bpc" id="L113" title="1 of 4 branches missed.">        if (before != null &amp;&amp; before.isObject()) before.fieldNames().forEachRemaining(fields::add);</span>
+<span class="pc bpc" id="L114" title="1 of 4 branches missed.">        if (after != null &amp;&amp; after.isObject()) after.fieldNames().forEachRemaining(fields::add);</span>
+<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        return fields.stream().filter(key -&gt; !Objects.equals(field(before, key), field(after, key))).map(key -&gt; {</span>
+<span class="fc" id="L116">            JsonNode oldValue = field(before, key), newValue = field(after, key);</span>
+<span class="fc bfc" id="L117" title="All 4 branches covered.">            AuditQuery.ChangeType change = oldValue == null ? AuditQuery.ChangeType.ADDED : newValue == null ? AuditQuery.ChangeType.REMOVED : AuditQuery.ChangeType.CHANGED;</span>
+<span class="fc" id="L118">            return new AuditQuery.Difference(key, change, copy(oldValue), copy(newValue));</span>
+<span class="fc" id="L119">        }).collect(Collectors.toUnmodifiableList());</span>
+    }
+
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">    private static JsonNode field(JsonNode node, String name) { return node == null ? null : node.get(name); }</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">    private static JsonNode copy(JsonNode node) { return node == null ? null : node.deepCopy(); }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,46 @@
+// Check the actual compiled Vue offline build, including reactive host and shared interaction engine.
+const fs=require('fs'),path=require('path'),{pathToFileURL}=require('url');
+const {chromium}=require('C:/Users/123/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const root=path.resolve(__dirname,'..'),results=[],errors=[],requests=[];
+const record=(name,passed)=>{results.push({name,passed:!!passed});if(!passed)throw new Error(name);};
+let browser,page;
+(async()=>{
+ browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
+ page=await browser.newPage({viewport:{width:1440,height:1050}});page.setDefaultTimeout(10000);
+ page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});
+ const button=name=>page.getByRole('button',{name,exact:true}).click();
+ const login=async(uid,sid)=>{await page.locator('#login-user').selectOption(uid);await page.locator('#login-system').selectOption(sid);await button('进入演示');};
+ await page.goto(pathToFileURL(path.join(root,'prototype/vue/dist/index.html')).href);
+ record('Vue离线产物挂载并显示登录表单',await page.locator('#vue-root').evaluate(el=>!!el.__vue_app__)&&await page.locator('#login-form').count()===1);
+ record('Tailwind布局工具类实际编译',await page.locator('.vue-toolbar').evaluate(el=>getComputedStyle(el).display==='flex'));
+ await page.getByRole('checkbox',{name:'Vue评审API标注'}).check();
+ await login('1','1');record('Vue宿主身份摘要随登录更新',await page.locator('.vue-toolbar').textContent().then(t=>t.includes('周齐')&&t.includes('教务')));
+ await button('角色管理');record('Vue评审开关驱动API注释',await page.locator('.api-note').count()>0);
+ await page.locator('#api-toggle').uncheck();record('两个API标注开关状态同步',!(await page.getByRole('checkbox',{name:'Vue评审API标注'}).isChecked())&&await page.locator('.api-note').count()===0);await page.getByRole('checkbox',{name:'Vue评审API标注'}).check();
+ await button('新建角色');await page.locator('[name=code]').fill('VUE_REVIEW');await page.locator('[name=name]').fill('Vue评审角色');await button('保存');
+ const row=page.locator('tbody tr').filter({hasText:'VUE_REVIEW'});
+ record('Vue工程可创建角色',await row.count()===1);
+ await row.getByRole('button',{name:'分配权限',exact:true}).click();
+ await page.locator('label.check').filter({hasText:'menu:audit'}).locator('input').check();
+ await page.locator('label.check').filter({hasText:'sys:audit:read'}).locator('input').check();await button('保存授权');
+ record('Vue工程角色权限集合保存',await row.textContent().then(t=>t.includes('2 项')));
+ await button('成员管理');await page.locator('tbody tr').filter({hasText:'chenyu'}).getByRole('button',{name:'分配角色',exact:true}).click();
+ await page.locator('label.check').filter({hasText:'Vue评审角色'}).locator('input').check();await button('保存授权');
+ record('Vue工程成员角色集合保存',await page.locator('tbody tr').filter({hasText:'chenyu'}).textContent().then(t=>t.includes('Vue评审角色')));
+ await button('退出');await login('4','1');record('普通用户在A取得审计菜单',await page.getByRole('button',{name:'审计日志',exact:true}).count()===1);
+ await page.locator('#system-picker').selectOption('2');record('切换B不继承A授权',await page.getByRole('button',{name:'审计日志',exact:true}).count()===0);
+ record('Vue宿主切换摘要更新',await page.locator('.vue-toolbar').textContent().then(t=>t.includes('陈雨')&&t.includes('科研')));
+ await button('退出');await login('1','1');await button('审计日志');
+ record('可查询真实模拟授权变更',await page.locator('tbody').textContent().then(t=>t.includes('MEMBER_ROLES_REPLACED')&&t.includes('ROLE_PERMISSIONS_REPLACED')));
+ await page.locator('tbody tr').filter({hasText:'MEMBER_ROLES_REPLACED'}).first().getByRole('button',{name:'前后值',exact:true}).click();
+ record('详情展示前后集合及版本',await page.locator('dialog').textContent().then(t=>t.includes('roleIds')&&t.includes('version')));await button('完成');
+ await page.screenshot({path:path.join(root,'docs/images/prototype-vue-review.png'),fullPage:true});
+ await page.setViewportSize({width:375,height:1050});await button('个人中心');
+ record('Vue版本375px无整页横向溢出',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ record('离线产物无CDN或后端网络请求',requests.length===0);
+ record('Vue工程无浏览器脚本异常',errors.length===0);
+})().catch(e=>{errors.push(e.stack||String(e));process.exitCode=1;}).finally(async()=>{
+ if(errors.length&&page)await page.screenshot({path:path.join(root,'validation/vue-browser-failure.png'),fullPage:true}).catch(()=>{});
+ fs.writeFileSync(path.join(root,'validation/vue-browser-report.json'),JSON.stringify({date:new Date().toISOString(),scope:'Built Vue prototype, shared JS interaction engine',results,errors,requests,limitation:'Only local memory simulation; no backend, SQL, JaCoCo or full JS static typing.'},null,2)+'\n');
+ console.log(JSON.stringify({passed:results.filter(x=>x.passed).length,total:results.length,errors}));await browser?.close();
+});

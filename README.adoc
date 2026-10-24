@@ -1,0 +1,40 @@
+= 多系统 RBAC0 需求与设计交付包
+:toc:
+
+设计基线 V1.2，2026-10-21；F模块实现补充，2026-10-24。本包仅覆盖多系统隔离的 RBAC0：全局账号、系统成员、角色、权限、直接授权、会话与审计。不包含角色继承、互斥、人数限制、先决角色或角色子集激活。
+
+== F模块新增代码
+
+F负责成功变更审计、独立安全事件和四个日志查询接口。后端在backend/，实际API页面在frontend/；从link:F-审计模块使用说明.md[F模块运行与交接说明]开始。源码、构建产物、测试与五份个人设计已补齐；验证见link:validation/F-module-report.json[F模块实际记录]。原V1.2 ZIP保留为设计基线，新代码单独打包为RBAC0-F审计模块代码包.zip。
+
+== 先核对第一次检查
+
+2026年10月27—29日，20分；要求面向功能的RBAC0后端、可运行原型、数据库与详细设计、Gitee及JaCoCo。前四步材料具备不等于整个第一次检查完成。先读link:docs/09-第一次检查要求与前四步复核.adoc[原文依据、四步复核和剩余差距]。
+
+== 阅读与运行
+
+* link:docs/index.html[完整设计阅读版]：需求、术语、原型、API、数据库、详细设计、六人分工和验收。
+* link:prototype/vue/dist/index.html[Vue工程交互原型]：浏览器直接打开已构建离线产物；link:prototype/index.html[独立HTML兼容版]。数据均在内存，刷新重置；初始原型口令DemoOnly12345，与SQL禁用密码占位符无关。Vue/TS宿主复用JS交互引擎，详见link:prototype/vue/README.adoc[工程边界与复建说明]。
+* link:api/openapi.json[OpenAPI 契约]：38 个 RBAC0 端点；link:api/endpoints.csv[端点表]。
+* link:database/001_rbac0.sql[11 张基础表] → link:database/003_demo_seed.sql[演示数据] → link:database/004_rbac0_review.sql[只读数据库核对]。在全新 MySQL 8.0.16+ 测试库按此顺序执行。
+* link:docs/07-RBAC0六人分工.html[六人详细功能设计分工阅读版]；link:docs/07-RBAC0六人分工.adoc[adoc源文件]。每人5份明确设计文件；F的5份已补充，A—E的25份仍待完成，均需成员复核；link:docs/traceability.csv[需求追踪]。
+
+== 完成边界
+
+原V1.2交付为设计、SQL源文件及模拟原型。2026-10-24新增F模块Java后端、真实API页面、H2事务/接口测试与JaCoCo；其余A—E后端、宿主认证联调、MySQL实库执行、压力测试及服务器部署仍待完成，不能把F模块完成算作整个RBAC0完成。两份课程PDF已完整读取并核对关键原页面；录音未转写；未伪造教师或小组确认。
+
+旧包保存在本地 .history/，不纳入本次交付。现有文件中不再预留后续权限模型的页面、端点或表。
+
+== 原型评审建议
+
+平台管理员进入系统 A → 新建业务角色 → 授予 menu:audit 与 sys:audit:read → 给陈雨指派该角色 → 点击切换身份，以陈雨进入系统 A → 查看审计入口 → 管理员撤销后再次检查。切换身份时不要刷新，否则模拟变更会重置。
+
+菜单权限和操作权限独立；只授予菜单不会自动授予接口操作权。日期筛选必须成对，最多 90 个自然日；空日期按近 7 个自然日查询。
+
+== 维护与验证
+
+Python生成脚本只使用标准库。先运行scripts/build_package.py生成契约、SQL种子、字典和阅读版；如修改原型源，进入prototype/vue执行npm ci与npm run build；进入scripts执行npm ci安装标准契约校验器，然后运行scripts/validate_openapi.cjs、check_browser.cjs、check_vue_browser.cjs；再运行verify_package.py检查一致性，最后package_delivery.py生成ZIP。浏览器脚本本机默认使用工作区运行时Playwright和Edge；迁移电脑需修改脚本的工具路径。构建依赖的初次安装需要网络，dist可离线打开。
+
+生成文件以 scripts/contract.py 和 scripts/build_package.py 中的定义为源，不直接修改生成的 JSON、CSV、种子或 HTML 阅读版。编辑 .adoc 后需重建阅读版。
+
+link:docs/修订记录.adoc[本次问题与修订记录]；link:validation/report.md[验证记录]。

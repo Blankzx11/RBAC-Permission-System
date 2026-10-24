@@ -1,0 +1,2 @@
+import { writeFileSync } from 'node:fs'
+writeFileSync(new URL('../dist/index.html', import.meta.url), `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RBAC0 Vue工程原型 V1.2</title><link rel="stylesheet" href="./rbac0-prototype.css"></head><body><div id="vue-root"></div><script defer src="./rbac0-prototype.js"></script></body></html>`)

@@ -1,0 +1,183 @@
+{
+  "generatedAt": "2026-10-24T04:25:15.369Z",
+  "base": "http://127.0.0.1:15173",
+  "backendProfile": "demo",
+  "database": "H2 JDBC",
+  "apiMocked": false,
+  "artifactSha256": {
+    "backend/target/rbac0-audit-1.0.0.jar": "60211dee33cb2d1e2343cb78bc1518658f81ac90879ef9ef5befd5ec744977d9",
+    "frontend/dist/index.html": "ac67c59718a35fa5f184e3d386e961ccb77738eec675225912641c525e6e6df3",
+    "frontend/dist/assets/index-BvgVVU4P.js": "40b01de002941723ba38850f6d59452f1508e02a1d4fa2a5b1fa76f2faf58df0",
+    "frontend/dist/assets/index-DMlK1K3V.css": "f2667b00829459c3a872fd57c9c60b589645fc14ca5cf12e988677013836c7d8"
+  },
+  "checks": [
+    {
+      "name": "页面加载后不会自动发送认证请求",
+      "passed": true
+    },
+    {
+      "name": "实际查询 HTTP 200 (2)",
+      "passed": true
+    },
+    {
+      "name": "系统A只返回两条本系统记录，BIGINT保持字符串",
+      "passed": true
+    },
+    {
+      "name": "系统详情来自真实接口并显示版本差异",
+      "passed": true
+    },
+    {
+      "name": "实际查询 HTTP 200 (5)",
+      "passed": true
+    },
+    {
+      "name": "系统B身份返回自己的记录",
+      "passed": true
+    },
+    {
+      "name": "实际查询 HTTP 403 (7)",
+      "passed": true
+    },
+    {
+      "name": "修改页面系统ID不能获得其他系统权限",
+      "passed": true
+    },
+    {
+      "name": "实际查询 HTTP 403 (9)",
+      "passed": true
+    },
+    {
+      "name": "无审计权限显示拒绝信息且没有残留数据",
+      "passed": true
+    },
+    {
+      "name": "实际查询 HTTP 200 (11)",
+      "passed": true
+    },
+    {
+      "name": "平台上下文可读取全部四条业务审计",
+      "passed": true
+    },
+    {
+      "name": "平台详情可展示创建记录",
+      "passed": true
+    },
+    {
+      "name": "实际查询 HTTP 200 (14)",
+      "passed": true
+    },
+    {
+      "name": "平台sysId过滤不会包含平台或其他系统",
+      "passed": true
+    },
+    {
+      "name": "清除筛选重新获取全部数据",
+      "passed": true
+    },
+    {
+      "name": "实际查询 HTTP 200 (17)",
+      "passed": true
+    },
+    {
+      "name": "无匹配条件返回空结果",
+      "passed": true
+    },
+    {
+      "name": "日期只填一端显示校验错误",
+      "passed": true
+    },
+    {
+      "name": "实际查询 HTTP 401 (20)",
+      "passed": true
+    },
+    {
+      "name": "实际查询 HTTP 403 (21)",
+      "passed": true
+    },
+    {
+      "name": "实际查询 HTTP 200 (22)",
+      "passed": true
+    },
+    {
+      "name": "375px页面无整页横向溢出",
+      "passed": true
+    },
+    {
+      "name": "运行过程没有脚本异常",
+      "passed": true
+    },
+    {
+      "name": "四种查询路由都经真实HTTP返回",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/systems/1/audit-logs?page=1&pageSize=20",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/systems/1/audit-logs/107333429913190400",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/systems/2/audit-logs?page=1&pageSize=20",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/systems/1/audit-logs?page=1&pageSize=20",
+      "status": 403
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/systems/1/audit-logs?page=1&pageSize=20",
+      "status": 403
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/platform/audit-logs?page=1&pageSize=20",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/platform/audit-logs/107333429795749888",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/platform/audit-logs?page=1&pageSize=20&sysId=2",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/platform/audit-logs?page=1&pageSize=20",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/platform/audit-logs?page=1&pageSize=20&action=DOES_NOT_EXIST",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/platform/audit-logs?page=1&pageSize=20",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/platform/audit-logs?page=1&pageSize=20",
+      "status": 403
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:15173/api/v1/platform/audit-logs?page=1&pageSize=20",
+      "status": 200
+    }
+  ]
+}

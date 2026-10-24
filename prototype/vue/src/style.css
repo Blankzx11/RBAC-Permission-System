@@ -1,0 +1,4 @@
+@import "tailwindcss";
+@import "./legacy.css";
+.vue-toolbar a { color: #bae6fd; }
+.vue-toolbar input { accent-color: #7dd3fc; }

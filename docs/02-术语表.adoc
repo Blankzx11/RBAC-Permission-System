@@ -1,0 +1,22 @@
+= 术语表
+
+[cols="2,4",options="header"]
+|===
+|术语 |统一含义
+|平台 Platform |管理全局账号和多个业务子系统的控制面。
+|子系统 System |独立权限边界，数据库字段 sys_id，API 字段 sysId，路径 /systems/{sysId}。
+|用户 User |全局身份，用户名唯一；不直接持有业务权限。
+|成员 Member |某 userId 在某 sysId 的资格与本地状态；可以停用而不影响其他系统。
+|角色 Role |某系统内的一组权限；身份标签“系统管理员”由受保护 SYS_ADMIN 角色承担。
+|权限 Permission |逻辑操作 permissionCode；MENU 表示页面入口权限，ACTION 表示操作权限，可被按钮和后端共同引用。
+|UA |用户角色指派，通过 (sys_id,user_id,role_id) 关联。
+|PA |角色权限指派，通过 (sys_id,role_id,permission_id) 关联。
+|会话 Session |一次绑定身份和系统上下文的访问状态；token 引用服务端 sessionId。
+|会话角色 |当前系统内全部有效直接指派角色；本包不提供选择角色子集的接口。
+|policyVersion |子系统权限策略版本。授权、角色和权限状态、成员资格变化递增。
+|version 与 ETag |根资源并发版本；HTTP If-Match 防止覆盖他人已提交修改，与 policyVersion 含义不同。
+|authVersion |全局账号安全版本；改密、全局启停时变化，旧会话不能继续使用。
+|事务脚本 |按用例组织步骤的结构化服务；不是拒绝任何类或接口。
+|纯函数 |输入相同输出相同，不访问数据库、缓存、时钟、全局可变变量，不写外部状态。
+|原型 |内存交互模型，用于需求评审；不等于已实现或已验证的生产系统。
+|===

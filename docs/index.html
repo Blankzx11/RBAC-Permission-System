@@ -1,0 +1,694 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>多系统 RBAC0 设计文档</title><style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:#20324a;background:#f5f7fb;font:15px/1.85 "Segoe UI","Microsoft YaHei",sans-serif}header{background:#183557;color:white;padding:40px max(25px,calc((100vw - 1200px)/2))}header h1{font-size:30px;margin:0 0 10px}header p{margin:0;color:#c6d6ec}header a{color:#e4efff} .layout{display:grid;grid-template-columns:240px minmax(0,960px);gap:30px;max-width:1260px;margin:30px auto;padding:0 20px}nav{position:sticky;top:18px;align-self:start;display:grid;gap:8px}nav a{font-size:13px;color:#4c6487;text-decoration:none;padding:6px 0}main{min-width:0}section{background:white;border:1px solid #e0e7f0;border-radius:10px;padding:32px;margin-bottom:25px;scroll-margin-top:15px}h2{font-size:25px;border-bottom:1px solid #dce4ef;padding-bottom:15px;margin:0 0 24px}h3{font-size:20px;margin-top:32px;color:#294d7b}h4{font-size:17px}p{overflow-wrap:anywhere}a{color:#285bdd}code{font:13px/1.7 Consolas,monospace;background:#eff3f9;padding:2px 4px;border-radius:4px;overflow-wrap:anywhere}pre{background:#f0f4fa;padding:17px;overflow:auto;border-radius:8px;white-space:pre-wrap}pre code{padding:0;background:transparent}.table-scroll{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.75}th,td{border:1px solid #dce4ee;padding:10px 12px;text-align:left;vertical-align:top;min-width:80px}th{background:#e9f0fb;color:#29466e}tr:nth-child(even){background:#fafbfd}figure{margin:25px 0}figure img{display:block;width:100%;height:auto;background:white}figcaption{font-size:12px;color:#60758f;text-align:center}.links{margin-top:18px;display:flex;gap:20px;flex-wrap:wrap}li{margin:7px 0}@media(max-width:850px){.layout{display:block}nav{position:static;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:8px 18px}section{padding:22px 18px}header h1{font-size:25px}table{min-width:620px}}@media print{header{color:#000;background:#fff;padding:0}header p{color:#333}nav{display:none}.layout{display:block;margin:0;padding:0}section{border:0;padding:0;break-before:page}h2,h3{break-after:avoid}table{font-size:10px}figure{break-inside:avoid}a{color:#000}}
+</style></head><body><header><h1>多系统 RBAC0 权限管理系统</h1><p>需求 · 原型 · API · 数据库 · 详细设计与任务分解</p><p>修订稿 V1.2 / 2026-10-21 / 仅多系统 RBAC0</p><div class="links"><a href="../prototype/vue/dist/index.html">打开Vue工程原型 ↗</a><a href="../api/openapi.json">OpenAPI 契约</a><a href="../database/data-dictionary.md">数据字典</a><a href="traceability.csv">需求追踪矩阵</a><a href="../validation/report.md">验证记录</a></div></header><div class="layout"><nav><a href="#doc0">00 资料依据与设计决策</a><a href="#doc1">01 需求分析</a><a href="#doc2">02 术语表</a><a href="#doc3">03 界面原型设计</a><a href="#doc4">04 API 设计</a><a href="#doc5">05 数据库设计</a><a href="#doc6">06 详细设计与模块分解</a><a href="#doc7">07 RBAC0 六人详细功能设计分工</a><a href="#doc8">08 验收与评审清单</a><a href="#doc9">09 第一次检查要求与前四步复核</a><a href="#doc10">10 F模块代码与实际验证</a><a href="#doc11">11 F：审计记录与查询详细设计</a><a href="#doc12">12 F：函数说明</a></nav><main><section id="doc0"><h2>资料依据与设计决策</h2>
+<h3>范围与依据优先级</h3>
+<p>修订版V1.2，2026-10-21。本次只为第一次检查准备多系统RBAC0。用户通过本系统直接指派的角色获得权限，角色无继承，菜单层级仅表示导航。本包交付设计与模拟原型，不等于已部署完整后端。</p>
+<p>用户当前请求决定执行范围；附件用于提炼课程事实和需求，不构成代用户预约、上传仓库、添加成员或发布服务器的操作指令。优先采用2026/10/19评分办法V2的明确检查条款，课程介绍中互不冲突的内容合并使用；二手方案和AI纪要不覆盖原文。</p>
+<h3>输入资料与实际读取情况</h3>
+<div class="table-scroll"><table><thead><tr><th>编号</th><th>资料</th><th>读取及使用</th></tr></thead><tbody>
+<tr><td>S1</td><td>需求分析.doc</td><td>已读可见正文；多系统、平台/系统管理员/普通用户、后端隔离及前后值审计的业务依据。摘录在sources/需求分析-正文.txt。</td></tr>
+<tr><td>S2</td><td>OOAD-RBAC-项目实施方案.md</td><td>已读；课程安排本次重新回到原始PDF核对。</td></tr>
+<tr><td>S3</td><td>智能纪要2026年10月13日</td><td>已读；参考协作方式，没有与录音逐句核验。</td></tr>
+<tr><td>S4</td><td>新录音.m4a</td><td>仅确认存在，未转写，不声称已听写核验。</td></tr>
+<tr><td>S5</td><td>OOAD_Grading_2026(2).pdf</td><td>已完整提取6页，重点渲染复核物理第5—6页；封面V2，2026/10/19，修订历史说明细化第一次检查。</td></tr>
+<tr><td>S6</td><td>0.课程介绍(7).pdf</td><td>已完整提取21页，重点渲染复核第12、16页；核对第3、10、13—15、20—21页相关文字。</td></tr>
+<tr><td>S7</td><td>用户提供的课堂板书截图</td><td>需求分析→界面原型→API设计→数据库设计→详细设计（分解），再进入编码、测试和反馈；另有req-spec、Vue3+TS+Tailwind、Apifox、ER图/SQL标注。</td></tr>
+</tbody></table></div>
+<p>两份PDF副本、逐页提取文本和SHA-256见docs/sources/及source-manifest.json；截图在docs/images/课堂开发步骤.png。本文页码指PDF物理页，评分办法物理第5页印刷页码为第2页。文字提取便于检索，表格已按原页面核对。</p>
+<h3>已核实的第一次检查要求</h3>
+<div class="table-scroll"><table><thead><tr><th>编号</th><th>原文内容（概括）</th><th>位置</th></tr></thead><tbody>
+<tr><td>CR-01</td><td>10月27—29日，20分；前端界面、数据库设计及面向功能的RBAC0后端；课程介绍还明确列API设计。</td><td>S5第5页表3-1；S6第16页</td></tr>
+<tr><td>CR-02</td><td>代码和设计文档提交Gitee，设计文档采用adoc，包含数据库设计和详细设计。</td><td>S5第5页3.2及助教第1项</td></tr>
+<tr><td>CR-03</td><td>可运行的界面原型，RBAC0后端部署在服务器。</td><td>S5第5页助教第2项</td></tr>
+<tr><td>CR-04</td><td>现场跑一遍后端JaCoCo；课程网站交代码地址和JaCoCo报告。</td><td>S5第5页3.2及助教第3项</td></tr>
+<tr><td>CR-05</td><td>Gitee开源或将mingqcn加入成员；钉钉接龙预约口试。</td><td>S5第5页3.2</td></tr>
+<tr><td>CR-06</td><td>教师询问需求、存在的问题、采用的设计方法及理由；JavaEE涉及第1—6章、实验1—3。</td><td>S5第6页上部</td></tr>
+<tr><td>CR-07</td><td>三门课同组，每组至多6人；课程设计70%、期末30%；个人和小组各50%，完全无发言个人部分为0。</td><td>S5第4—5页；S6第13、15页</td></tr>
+<tr><td>CR-08</td><td>用例分析、UML、结构化等软件设计方法；RBAC0核心为用户—角色—权限。</td><td>S6第3、10、20—21页</td></tr>
+</tbody></table></div>
+<p>实际完成状态见09-第一次检查要求与前四步复核.adoc；列出课程要求不表示已经完成Gitee、部署或JaCoCo操作。</p>
+<h3>原文差异与处理</h3>
+<p>课程介绍第12页概述写到RBAC2，而第16页和评分办法检查表末阶段写RBAC3；第二次检查的结束日也有差异。本次只做两份资料均明确的第一次RBAC0，不引入后续模型。评分办法第一次检查表未单列API，课程介绍第16页与板书已明确，因此保留API设计。</p>
+<p>评分办法用“面向功能”，课程介绍用“结构化”；本版按功能树、输入输出、函数调用、事务与算法分解，不要求再做一套OO后端。Vue3、TS、Tailwind和Apifox来自板书，两份PDF未指定这些具体工具。StarUML在课程介绍第14页是建议；本包提供PlantUML源，不冒充StarUML原生工程。OpenAPI文件可导入Apifox，不代表已创建线上项目。</p>
+<h3>设计决策</h3>
+<p>ADR-01 多系统：全局iam_user与本地iam_member分离，角色/权限/指派带sys_id。该业务范围来自S1，不声称PDF要求SaaS租户功能。</p>
+<p>ADR-02 完整性：关联使用同系统复合外键；用例再校验状态、归属与委派；菜单隐藏不替代后端检查。</p>
+<p>ADR-03 审计：成功授权差集、根version、policyVersion、脱敏before/after同事务提交，审计失败回滚；失败安全事件单独记录。</p>
+<p>ADR-04 缓存：每请求主库检查账号、会话、系统、成员与策略版本；缓存键包含sysId/userId/policyVersion。Redis故障回源；主库安全门不可用503。</p>
+<p>ADR-05 生命周期：账号/系统/成员停用退出，业务角色和权限无引用且不受保护才可删除；恢复启用会恢复原指派效果。</p>
+<p>ADR-06 结构化实现：Controller→用例事务脚本→Mapper，数据结构传递事实，函数集中处理规则；Java类组织函数本身不等于另一套OO设计。</p>
+<p>ADR-07 管理边界：平台维护全局账号；系统管理员只维护本地成员，不改全局密码或平台标记；受保护SYS_ADMIN及其指派由平台管理。</p>
+<p>ADR-08 委派：角色变更前后有效权限都不能超出操作者集合；定义权限本身不自动获得权限。应用管理保护不是RBAC2的互斥、基数或先决角色约束。</p>
+<h3>项目约定与待落实事项</h3>
+<p>性能数值、覆盖率目标、密码锁定阈值、MySQL版本、缓存与会话策略均为项目选择，PDF未给相应量化门槛，不能当教师评分标准或实测成绩。实际姓名、人工评审、Gitee仓库、服务器和口试预约待小组落实；原录音未核验。机器契约为OpenAPI3.0.3和MySQL8.0.16+。</p></section><section id="doc1"><h2>需求分析</h2>
+<h3>第一次检查基线</h3>
+<p>依据评分办法V2（2026/10/19）PDF第5页及课程介绍第16页，本阶段为10月27—29日、20分的RBAC0面向功能实现。按课堂顺序先需求、原型、API、数据库，再详细功能分解。课程要求和项目自行选择的性能/密码/覆盖率目标分开记录，详见00和09。</p>
+<h3>业务目标和边界</h3>
+<p>为课程中的多个业务子系统提供统一身份、角色和权限管理。平台管理员建立子系统和账号，系统管理员管理自己子系统的成员、角色与权限，普通用户只进入已加入的系统并使用获授权的功能。一个用户在不同系统的权限互不传递。</p>
+<p>本次基线实现 RBAC0：一个用户可直接指派多个本系统角色，角色关联多个权限；当前会话使用全部有效直接角色。角色无继承、无互斥或人数等模型约束。MENU 为页面入口，ACTION 为操作码，菜单父子独立授权。</p>
+<p>范围外：组织部门、行级数据范围、第三方 SSO、注册找回邮件、工作流、租户计费、跨系统角色继承、角色直接授予用户之外的单独权限、任意 SQL/URL 规则执行。原型中的示例业务系统不在本次业务实现范围内。</p>
+<h3>角色和信任边界</h3>
+<div class="table-scroll"><table><thead><tr><th>参与者</th><th>能力</th><th>限制</th></tr></thead><tbody>
+<tr><td>平台管理员</td><td>全局账号、子系统、成员初始化、受保护管理员角色、跨系统审计</td><td>使用平台会话；进入子系统时取得该系统上下文。所有越权特权操作留审计。</td></tr>
+<tr><td>系统管理员</td><td>本系统成员、业务角色、权限定义、授权和本系统审计</td><td>不能改全局账号、平台标记和受保护 SYS_ADMIN；不能把 A 的对象绑定到 B。</td></tr>
+<tr><td>普通用户</td><td>登录、切换已加入系统、个人信息和本人的权限清单</td><td>不拥有管理 API 权限；前端隐藏入口，后端仍独立鉴权。</td></tr>
+<tr><td>未认证访问者</td><td>登录与静态公开的登录页</td><td>不能枚举用户、角色或有权限的系统。</td></tr>
+</tbody></table></div>
+<figure><img src="images/use-cases.svg" alt="参与者与系统用例"><figcaption>参与者与系统用例</figcaption></figure>
+<h3>功能需求条目</h3>
+<div class="table-scroll"><table><thead><tr><th>编号</th><th>阶段</th><th>需求</th><th>可验证的验收标准</th></tr></thead><tbody>
+<tr><td>FR-01</td><td>RBAC0</td><td>登录、登出、系统上下文切换</td><td>凭据正确且账号、成员和系统启用才签发系统会话；登出后旧会话下一次请求失败；切换系统重新校验成员资格。</td></tr>
+<tr><td>FR-02</td><td>RBAC0</td><td>全局账号管理</td><td>平台管理员可创建、检索、改昵称和全局启停账号；username 全局唯一；密码哈希不出现在 API 和审计。</td></tr>
+<tr><td>FR-03</td><td>RBAC0</td><td>子系统管理</td><td>平台管理员可创建、修改名称描述和停用子系统；sysCode 全局唯一且创建后不可改；停用后所有系统请求失败。</td></tr>
+<tr><td>FR-04</td><td>RBAC0</td><td>成员管理</td><td>系统管理员按精确用户名添加已有账号、查询和修改本系统显示名与状态；停用 A 成员不影响 B 的成员资格。</td></tr>
+<tr><td>FR-05</td><td>RBAC0</td><td>角色管理</td><td>角色编码在系统内唯一；可查增改启停；有关联或内置角色不能删除；系统管理员不能修改受保护角色。</td></tr>
+<tr><td>FR-06</td><td>RBAC0</td><td>权限与菜单配置</td><td>权限码在系统内唯一；支持 MENU、ACTION；ACTION 可绑定按钮和多个后端操作；菜单无环，MENU 路由只能取受控路由目录，ACTION 路由必须为空。</td></tr>
+<tr><td>FR-07</td><td>RBAC0</td><td>成员角色指派</td><td>全量替换一个成员的角色集合；空数组表示清空；重复 ID 自动去重；任意异系统或无效对象导致整批拒绝，不能部分成功。</td></tr>
+<tr><td>FR-08</td><td>RBAC0</td><td>角色权限指派</td><td>全量替换业务角色的权限集合；父子独立勾选；未授权菜单父项仅作导航容器；授权者不能授予自己有效集合之外的权限。</td></tr>
+<tr><td>FR-09</td><td>RBAC0</td><td>统一鉴权与有效权限查询</td><td>后端按当前系统、会话和 permissionCode 校验每个请求；对象不属于本系统时返回 404；无对应操作权限返回 403；提供本人的菜单和权限。</td></tr>
+<tr><td>FR-10</td><td>RBAC0</td><td>权限变更审计与查询</td><td>角色指派和权限指派必须记录排序去重后的前后集合、操作者、系统、目标、时间、requestId；成功审计失败则业务回滚。</td></tr>
+<tr><td>FR-11</td><td>RBAC0</td><td>个人中心和密码修改</td><td>可查看本人身份、当前角色和权限；验证旧密码后修改，递增 authVersion 并撤销全部旧会话，要求重新登录。</td></tr>
+</tbody></table></div>
+<h3>通用业务规则</h3>
+<p>BR-01 所有 ID 在 JSON 中用十进制字符串，避免浏览器整数精度丢失。服务端生成 BIGINT ID，不信任客户端提交的 sys_id。</p>
+<p>BR-02 路径 sysId 必须等于会话绑定 sysId；平台会话只可访问平台 API，进入子系统先切换上下文。平台管理员在系统会话中仍须绑定当前 sysId，跨系统访问必须显式切换。</p>
+<p>BR-03 角色、权限和成员各自带版本号；PUT/PATCH/DELETE 要求 If-Match。授权集合的 ETag 是所属成员或角色的 version；提交成功统一递增该根对象版本，含授权变更。GET 的 ETag 按 <code>&quot;7&quot;</code> 格式返回。</p>
+<p>BR-04 系统管理员可授予的权限不超过自己在写事务内重新计算的有效权限；给成员分配的每个角色，其有效权限也必须为操作者权限子集。SYS_ADMIN 及其权限集合与成员指派仅平台管理员维护，防止通过修改他人角色绕过委派边界。</p>
+<p>BR-05 账号不能自助修改平台管理员标记。平台管理员之间的变更需平台会话，且保留至少一个启用的平台管理员；同一平台 guard 行串行化此类写入。</p>
+<p>BR-06 系统停用、成员停用、角色或权限停用只阻止其生效，不删除历史；无角色用户仍可访问个人中心。停用角色不参与权限计算，但原始指派仍存储，重新启用将恢复，界面必须明确提示。</p>
+<p>BR-07 username 为 3–32 个小写字母数字下划线，角色与系统编码为 2–40 个大写字母数字下划线，permissionCode 为 3–80 个小写字母数字冒号下划线。编码创建后不可修改；displayName 为 1–64 字符，描述不超过 500 字符。</p>
+<p>BR-08 新密码为 12–64 字符，至少包含字母与数字；密码哈希用经过配置和基准验证的自适应哈希算法保存。连续 5 次失败临时锁定账号 15 分钟，同时做 IP 与账号限流；账号全局禁用优先于解锁。</p>
+<p>BR-09 所有过滤参数采用参数化查询，sort 只能取白名单字段。输入名称以纯文本显示，审计快照按字段白名单脱敏。</p>
+<p>BR-10 停用角色或权限不参与有效权限计算。变更菜单 parentId 只影响导航；导航容器出现不代表用户取得该菜单的业务访问权限。</p>
+<h3>关键用例规约</h3>
+<p>UC-01 登录与系统切换。参与者为全部有效账号；前置为目标系统存在并启用。主流程：输入用户名、密码及 sysId，校验限流和凭据、账号、成员、系统状态，创建会话并返回短期访问 token，读取 <code>/me</code>、菜单和权限。平台管理员可不传 sysId 登录平台；普通账号不传则拒绝。切换时 <code>/me/systems</code> 只返回本人可进入的系统，通过 POST contexts 新建会话，旧上下文会话撤销。异常：错误凭据统一提示、429 限流、423 临时锁定、403 无成员资格。后置：不会因为切换而新增成员或角色。</p>
+<p>UC-02 维护全局账号。平台管理员登录平台，查询账号，填写用户名、显示名、初始密码；校验唯一性后创建。变更状态带 If-Match，锁 guard 后验证至少一个启用平台管理员，更新账号 authVersion 并使旧会话失效。异常：409 重名、412 版本冲突、409 最后管理员保护。系统管理员请求全局接口必须 403。</p>
+<p>UC-03 维护子系统。平台管理员创建业务系统，初始化系统内 SYS_ADMIN 角色与固定管理权限；使用成员和指派 API 添加首位管理员。未完成初始化前仅平台管理员可进入。可修改名称描述或停用系统，不允许物理删除带历史的系统。</p>
+<p>UC-04 维护成员。系统管理员在当前系统精确输入 username 添加已有账号，未知或不可添加的账号使用统一业务提示；只修改成员的本系统 displayName 和 status。成员已存在返回 409，不能通过该操作改全局密码和平台标记。</p>
+<p>UC-05 维护角色与权限。创建业务角色和权限；编辑名称状态带版本；权限 parentId 必须是本系统 MENU，祖先链无环。删除角色前检查指派、权限引用；删除权限前检查子节点和授权引用。有引用返回 409，建议先停用。受保护对象只允许平台管理员操作。</p>
+<p>UC-06 指派成员角色。前置：操作者有 <code>sys:member:assign</code>，目标成员在当前系统。读取当前集合及 ETag；修改勾选；提交完整 roleIds 与 If-Match。服务器锁系统行、重验操作者权限和对象归属，再锁成员并验版本，验证所有候选角色、委派规则，计算差集，替换关联、递增成员版本和策略版本、写 before/after 审计，同事务提交。异常：403 委派失败、404 异系统对象、412 并发修改、409 受保护对象或业务冲突；任何失败均无部分写入。</p>
+<p>UC-07 指派角色权限。前置有 <code>sys:role:grant</code>。读取角色及当前权限集合，菜单和操作独立勾选；提交完整 permissionIds。事务与 UC-06 一致，锁角色、校验非受保护及可委派集合；清空允许。提交后下一次开始的请求读取新策略版本；已通过鉴权的在途请求允许完成。</p>
+<p>UC-08 请求鉴权。路由元数据确定所需权限码；依次验证签名有效期、会话和账号版本、系统和成员状态、sysId 一致性，读取当前策略版本，以此求有效权限。匹配通过才进入对象查询，并在 SQL 中带 sys_id。匿名 401，无操作权限 403，跨系统对象 404。前端不能通过提交 permissionCodes 给自己授权。</p>
+<p>UC-09 查询审计。系统管理员只能查询当前系统，平台管理员在平台日志页可按系统筛选；分页、时间、操作者和操作类型过滤，详情显示脱敏前后值。日志只读，不提供删除、覆盖或自由 SQL 搜索 API。</p>
+<p>UC-10 修改本人密码。验证旧密码，更新密码哈希并递增 authVersion，在同事务记录不含密码的审计。接口返回成功后所有旧 token 失效，界面转登录；失败不得泄露密码或哈希。</p>
+<h3>非功能需求与验收计划</h3>
+<p>下表全部为本稿提出的可测目标，尚无实测数据；若课程原始要求不同，应由小组评审后改基线。</p>
+<div class="table-scroll"><table><thead><tr><th>编号</th><th>目标</th><th>验收方式</th></tr></thead><tbody>
+<tr><td>NFR-01</td><td>隔离与最小权限</td><td>账号 A 管系统 A 但仅为 B 普通成员；替换 path、body、ID、缓存键和 roleIds 的全部攻击用例均不得获得额外权限。</td></tr>
+<tr><td>NFR-02</td><td>撤权一致性</td><td>成功提交后，新开始的鉴权读取主库状态和最新策略版本，旧缓存不能命中；跨实例验证。已完成鉴权的在途调用不承诺追溯撤销。</td></tr>
+<tr><td>NFR-03</td><td>性能目标</td><td>4 vCPU 8 GB 应用、独立数据库、100k 账号、1m 指派、200 并发、持续 10 分钟；鉴权吞吐 ≥300 请求/秒，P95 ≤150ms，管理列表 P95 ≤300ms，技术失败率 &lt;0.1%。记录实际网络、连接池及命中率，不能与原始目标混写。</td></tr>
+<tr><td>NFR-04</td><td>并发正确性</td><td>同一根对象两个相同旧版本写入至多一个成功；并发授予、停用变更无丢失更新或越权。</td></tr>
+<tr><td>NFR-05</td><td>审计可靠性</td><td>故意让日志 INSERT 失败，权限变更回滚；日志可由 requestId 串联，无密码、token、完整 Authorization 头。</td></tr>
+<tr><td>NFR-06</td><td>可用与故障行为</td><td>Redis 不可用回源主库；主库不可用鉴权 503；所有查询分页 pageSize ≤100；日志默认近 7 个自然日，日期成对，最多 90 个自然日。</td></tr>
+<tr><td>NFR-07</td><td>交互可用</td><td>PC 与 375px 窄屏操作可完成；表单具标签、错误信息、键盘焦点；列表加载、空、错、冲突、无权限均有状态。</td></tr>
+<tr><td>NFR-08</td><td>可维护与可复现</td><td>同一 OpenAPI 和验收数据验证各模块；保存 .adoc、SQL、UML 源和设计决策；JaCoCo 覆盖认证、授权、隔离和并发规则，目标业务分支覆盖 ≥70%，不以排除业务类修饰结果。</td></tr>
+</tbody></table></div>
+<h3>验收场景</h3>
+<p>AT-01 平台管理员创建系统 A/B，给同一用户在 A 指派 SYS_ADMIN，在 B 指派 READER；A 可管理，B 只能查看个人中心和被授予菜单。AT-02 B 身份访问 A 路径或注入 A 的角色 ID，拒绝且没有写入。</p>
+<p>AT-03 创建业务角色并绑定两项权限，为成员授权；成员重新请求出现对应菜单和按钮。撤销后旧 token 下一请求不能执行操作。AT-04 两位管理员使用同一 ETag 提交不同集合，第二笔返回 412，刷新显示第一笔结果。</p>
+<p>AT-05 授权清空、重复 ID、非法 ID、停用角色、权限停用、菜单无父授权、受保护管理员角色分别按规则处理。AT-06 每笔成功授权有完整前后值；审计故障导致整笔回滚。</p></section><section id="doc2"><h2>术语表</h2>
+<div class="table-scroll"><table><thead><tr><th>术语</th><th>统一含义</th></tr></thead><tbody>
+<tr><td>平台 Platform</td><td>管理全局账号和多个业务子系统的控制面。</td></tr>
+<tr><td>子系统 System</td><td>独立权限边界，数据库字段 sys_id，API 字段 sysId，路径 /systems/{sysId}。</td></tr>
+<tr><td>用户 User</td><td>全局身份，用户名唯一；不直接持有业务权限。</td></tr>
+<tr><td>成员 Member</td><td>某 userId 在某 sysId 的资格与本地状态；可以停用而不影响其他系统。</td></tr>
+<tr><td>角色 Role</td><td>某系统内的一组权限；身份标签“系统管理员”由受保护 SYS_ADMIN 角色承担。</td></tr>
+<tr><td>权限 Permission</td><td>逻辑操作 permissionCode；MENU 表示页面入口权限，ACTION 表示操作权限，可被按钮和后端共同引用。</td></tr>
+<tr><td>UA</td><td>用户角色指派，通过 (sys_id,user_id,role_id) 关联。</td></tr>
+<tr><td>PA</td><td>角色权限指派，通过 (sys_id,role_id,permission_id) 关联。</td></tr>
+<tr><td>会话 Session</td><td>一次绑定身份和系统上下文的访问状态；token 引用服务端 sessionId。</td></tr>
+<tr><td>会话角色</td><td>当前系统内全部有效直接指派角色；本包不提供选择角色子集的接口。</td></tr>
+<tr><td>policyVersion</td><td>子系统权限策略版本。授权、角色和权限状态、成员资格变化递增。</td></tr>
+<tr><td>version 与 ETag</td><td>根资源并发版本；HTTP If-Match 防止覆盖他人已提交修改，与 policyVersion 含义不同。</td></tr>
+<tr><td>authVersion</td><td>全局账号安全版本；改密、全局启停时变化，旧会话不能继续使用。</td></tr>
+<tr><td>事务脚本</td><td>按用例组织步骤的结构化服务；不是拒绝任何类或接口。</td></tr>
+<tr><td>纯函数</td><td>输入相同输出相同，不访问数据库、缓存、时钟、全局可变变量，不写外部状态。</td></tr>
+<tr><td>原型</td><td>内存交互模型，用于需求评审；不等于已实现或已验证的生产系统。</td></tr>
+</tbody></table></div></section><section id="doc3"><h2>界面原型设计</h2>
+<h3>原型运行与交互范围</h3>
+<p>优先打开 <code>prototype/vue/dist/index.html</code>（已构建、无CDN）；兼容版为 <code>prototype/index.html</code>，两者均无需安装即可查看。默认登录页可选择“平台管理员”“系统管理员”“普通用户”三类身份和系统A/B；初始口令DemoOnly12345。新建账号及改密仅在页面内存口令表生效，刷新恢复，不写演示数据和审计。刷新重置全部模拟数据。“API标注”是设计注释，不是真实网络请求。</p>
+<p>实现的本地交互：登录退出、上下文切换、导航、列表筛选、新建和编辑账号/子系统/成员/角色/权限、启停、删除前引用检查、勾选授权、保存并展示前后值审计、查看个人权限、模拟旧版本提交、切换空状态和错误状态。本原型仅提供 RBAC0 页面。</p>
+<p>原型在浏览器侧模拟访问边界，数据都在同一页面内。生产系统必须按 API 和详细设计在服务器重新执行全部校验。</p>
+<h3>板书技术标注的对应工程</h3>
+<p>prototype/vue提供Vue3、TypeScript、Tailwind和Vite工程，package-lock.json锁定版本；npm run build实际执行Vue/TS检查和Vite打包，生成可直接以file方式打开的dist。记录见validation/vue-build.json，离线浏览器行为见vue-browser-report.json。</p>
+<p>这是增量工程化：Vue单文件组件和TS负责宿主、生命周期、类型化交互端口、当前身份摘要和评审控制；业务页面复用共享app.js的DOM交互引擎，构建前生成适配文件。没有全量TS重写，类型检查不覆盖JS引擎内部；不将工程构建当作生产前端或Java后端编译。该边界也写入工程README，避免仅有技术栈标签却没有实际工程。</p>
+<figure><img src="images/prototype-vue-review.png" alt="Vue工程实际离线运行：身份摘要、API评审与授权变更审计"><figcaption>Vue工程实际离线运行：身份摘要、API评审与授权变更审计</figcaption></figure>
+<h3>信息架构和页面清单</h3>
+<div class="table-scroll"><table><thead><tr><th>页面</th><th>路由</th><th>可见身份</th><th>内容及主要动作</th></tr></thead><tbody>
+<tr><td>P01</td><td>/login</td><td>所有</td><td>演示身份、目标上下文、登录反馈。</td></tr>
+<tr><td>P02</td><td>/overview</td><td>已登录</td><td>当前系统、身份、角色、权限及快速进入；计数均来自模拟数据，不展示虚构性能。</td></tr>
+<tr><td>P03</td><td>/platform/systems</td><td>平台管理员</td><td>系统列表、搜索、创建、编辑、启停、进入系统。</td></tr>
+<tr><td>P04</td><td>/platform/users</td><td>平台管理员</td><td>全局账号列表、创建、显示名编辑、启停，禁止在系统成员页改全局账号。</td></tr>
+<tr><td>P05</td><td>/systems/:sysId/members</td><td>系统管理员及具有查询权限者</td><td>当前系统成员、本地状态、添加成员、编辑、角色分配抽屉。</td></tr>
+<tr><td>P06</td><td>/systems/:sysId/roles</td><td>有角色查询权限者</td><td>角色列表、创建、修改、启停、删除、权限分配；内置角色标识。</td></tr>
+<tr><td>P07</td><td>/systems/:sysId/permissions</td><td>有权限查询权限者</td><td>菜单操作树、类型、编码、路由、创建编辑、停用和删除。</td></tr>
+<tr><td>P08</td><td>成员角色分配弹窗</td><td>有成员指派权限者</td><td>显示当前集合、候选角色及编码、版本、新增与移除差集、勾选/清空、保存；异系统候选不显示。</td></tr>
+<tr><td>P09</td><td>角色权限分配弹窗</td><td>有角色授权权限者</td><td>MENU/ACTION 独立勾选，不自动级联；展示当前版本和变更差集。</td></tr>
+<tr><td>P10</td><td>/audit 或 /platform/audit</td><td>相应审计查询权限者</td><td>时间范围、操作者、类型，平台页额外按系统筛选；前后值详情，只读。</td></tr>
+<tr><td>P11</td><td>/profile</td><td>已登录</td><td>全局身份、当前成员状态、直接角色、有效权限、改密表单和退出。</td></tr>
+<tr><td>P12</td><td>403 / 404 / 网络错误</td><td>所有</td><td>无权访问、对象不存在、服务暂不可用；提供返回和重试。</td></tr>
+</tbody></table></div>
+<h3>页面控件与 API 映射</h3>
+<p>|界面动作 |请求 |响应与反馈</p>
+<p>|登录提交 |POST /api/v1/auth/sessions |201 后取 me、menus、permissions；401 提示凭据错误，423 提示临时锁定，429 提示稍后重试。</p>
+<p>|上下文下拉 |GET /api/v1/me/systems；POST /api/v1/auth/contexts |创建新上下文后重新加载菜单并清空旧页数据，旧会话撤销。</p>
+<p>|账号列表/新建 |GET/POST /api/v1/platform/users |分页搜索；201 后进入详情或刷新列表；409 显示用户名占用。</p>
+<p>|账号/系统编辑 |PATCH 对应资源，If-Match |412 保留表单并提示刷新比对；不自动覆盖。</p>
+<p>|成员筛选/添加 |GET/POST /api/v1/systems/{sysId}/members |添加使用精确 username；全局账号不存在需平台管理员先创建。</p>
+<p>|角色指派打开/保存 |GET/PUT /api/v1/systems/{sysId}/members/{userId}/roles |GET 返回当前集合、options与ETag；PUT全量roleIds；409显示受保护或停用对象等原因。</p>
+<p>|权限分配打开/保存 |GET/PUT /api/v1/systems/{sysId}/roles/{roleId}/permissions |GET返回当前集合、options与ETag；PUT全量permissionIds，成功后刷新最终集合与审计。</p>
+<p>|角色/权限删除 |DELETE 对应资源，If-Match |确认弹窗列出对象名称；409 提示仍有引用或受保护，建议停用。</p>
+<p>|日志详情 |GET /api/v1/systems/{sysId}/audit-logs/{logId} |显示 before、after、requestId、时间及目标，不允许编辑。</p>
+<p>|个人改密 |PUT /api/v1/me/password |204 后清理客户端凭据并转登录；原型只演示此流程。</p></section><section id="doc4"><h2>API 设计</h2>
+<h3>契约位置和资源风格</h3>
+<p>权威机器契约为 <code>api/openapi.json</code>，OpenAPI3.0.3，版本1.2.0。<code>api/endpoints.csv</code>由同一数据生成，含方法、路径、阶段、权限、请求/响应。所有路径以/api/v1开头，仅38个RBAC0端点。已使用标准校验器校验，结果见validation/openapi-report.json；未向第三方平台导入，Apifox文件导入与人工核对见api/README-Apifox导入与核对.adoc。</p>
+<p>平台资源 <code>/platform/users</code>、<code>/platform/systems</code>、<code>/platform/audit-logs</code> 只接受平台管理员的平台会话。系统资源 <code>/systems/{sysId}/...</code> 绑定当前系统会话。<code>/me</code> 资源表示当前认证主体，不接受通过 userId 查询他人的个人信息。</p>
+<p>GET 查询；POST 新建；PATCH 局部修改属性；PUT 全量替换授权集合或密码；DELETE 删除无引用角色/权限或结束会话。集合 PUT 中 <code>[]</code> 是清空，不是忽略字段；缺少该字段返回 422。</p>
+<h3>身份认证和隔离</h3>
+<p>登录 POST sessions 请求 username、password、可选 sysId。不传 sysId 只允许平台管理员进入平台。返回 accessToken、tokenType、expiresIn、sessionId、sysId；token 含 sub、sid、sysId、authVersion、exp、iss、aud，不嵌入长期权限集合。</p>
+<p>受保护请求发送 <code>Authorization: Bearer &lt;accessToken&gt;</code>。访问 token 建议有效期 30 分钟，C1 不实现 refresh token。服务端仍校验会话存活与账号安全版本；JWT 签名正确并不等于有权限。浏览器演示原型没有真实 token；生产建议 token 仅存内存，经 HTTPS 使用，避免写日志。</p>
+<p>POST contexts 在已有会话基础上重新校验目标 sysId，平台上下文用 null，返回新会话并撤销旧会话。GET me/systems 只列出本人启用成员关系的启用系统；平台管理员可列全部，但访问系统仍需绑定上下文。</p>
+<p>系统接口先验证方法权限，再按 sys_id 查询对象；路径系统与 token 不同返回 403，路径系统相同而对象属于别的系统返回 404。平台管理员的特权分支不能省略对象 sys_id 过滤。</p>
+<h3>请求和响应规范</h3>
+<p>时间使用 ISO 8601 UTC，例如 <code>2026-10-20T02:00:00Z</code>，页面显示 Asia/Shanghai。ID 与版本使用 1 至 9223372036854775807 的十进制字符串，状态固定 ENABLED/DISABLED。未知字段拒绝。子系统请求不得写入 platformAdmin、sysId、builtin；平台账号创建和修改接口可以按契约维护 platformAdmin，须校验平台身份和最后管理员保护。</p>
+<p>成功体固定 <code>{data, requestId}</code>，列表的 data 固定 <code>{items,total,page,pageSize}</code>；创建返回 201 和 Location。DELETE、改密返回 204 且无响应体。资源 GET 返回 ETag；PATCH、PUT 授权和 DELETE 要求 If-Match，集合 PUT 与根资源共享版本。</p>
+<pre><code>{&quot;data&quot;:{&quot;roleIds&quot;:[&quot;102&quot;,&quot;103&quot;],&quot;version&quot;:&quot;7&quot;,&quot;options&quot;:[{&quot;id&quot;:&quot;102&quot;,&quot;code&quot;:&quot;MEMBER_MANAGER&quot;,&quot;name&quot;:&quot;成员管理员&quot;,&quot;status&quot;:&quot;ENABLED&quot;,&quot;builtin&quot;:false,&quot;assignable&quot;:true},{&quot;id&quot;:&quot;103&quot;,&quot;code&quot;:&quot;READER&quot;,&quot;name&quot;:&quot;成员查看员&quot;,&quot;status&quot;:&quot;ENABLED&quot;,&quot;builtin&quot;:false,&quot;assignable&quot;:true}]},&quot;requestId&quot;:&quot;req-a81&quot;}</code></pre>
+<p>PATCH字段逐个可选但至少提交一个可写字段（minProperties=1）；空对象拒绝。生成器已修复OpenAPI3.0不允许required空数组的问题，无固定必填字段时省略required关键字。</p>
+<p>错误体为 <code>{code,message,requestId,details}</code>，以 HTTP 状态表达错误；details 可包含 fieldErrors、violations、currentVersion。不得把所有错误包成 HTTP 200。</p>
+<pre><code>{&quot;code&quot;:&quot;VERSION_CONFLICT&quot;,&quot;message&quot;:&quot;资源已被修改，请刷新后重试&quot;,&quot;requestId&quot;:&quot;req-a82&quot;,&quot;details&quot;:{&quot;currentVersion&quot;:&quot;8&quot;}}</code></pre>
+<div class="table-scroll"><table><thead><tr><th>HTTP</th><th>业务码</th><th>处理语义</th></tr></thead><tbody>
+<tr><td>400</td><td>BAD_REQUEST</td><td>JSON 或查询语法错误、未知排序字段。</td></tr>
+<tr><td>401</td><td>UNAUTHENTICATED</td><td>未登录、token 失效、登出会话、账号 authVersion 不符。</td></tr>
+<tr><td>403</td><td>FORBIDDEN / SYSTEM_CONTEXT_MISMATCH</td><td>已认证但无操作权限、成员或系统停用、超出委派集合。</td></tr>
+<tr><td>404</td><td>NOT_FOUND</td><td>当前系统范围内找不到资源；异系统 ID 同样处理。</td></tr>
+<tr><td>409</td><td>DUPLICATE / RESOURCE_IN_USE / RESOURCE_DISABLED / PROTECTED_RESOURCE / MENU_CYCLE</td><td>重名、仍有引用、候选对象停用、受保护或菜单成环。</td></tr>
+<tr><td>412</td><td>VERSION_CONFLICT</td><td>If-Match 与根资源当前版本不一致。</td></tr>
+<tr><td>422</td><td>VALIDATION_ERROR</td><td>字段长度、枚举、密码规则、跨字段规则不合法。</td></tr>
+<tr><td>423</td><td>ACCOUNT_LOCKED</td><td>登录达到失败阈值，暂时锁定。</td></tr>
+<tr><td>428</td><td>PRECONDITION_REQUIRED</td><td>应携带 If-Match 的请求未携带。</td></tr>
+<tr><td>429</td><td>RATE_LIMITED</td><td>登录或接口限流，返回 Retry-After。</td></tr>
+<tr><td>503</td><td>SERVICE_UNAVAILABLE</td><td>主库安全门不可用；拒绝绕过鉴权。</td></tr>
+</tbody></table></div>
+<h3>查询约定</h3>
+<p>page 从 1 开始；pageSize 默认 20、最大 100；keyword 最多 64 字符；状态过滤为 ENABLED/DISABLED。账号/角色默认按 id 倒序，sort 按资源取白名单：成员为 userId、createdAt、username，其余按资源取 id、createdAt、name 或 username；成员默认 userId，其余默认 id；不接收 SQL 片段。审计支持 from/to、actorId、action、平台额外支持 sysId；默认近 7 个上海时区自然日；from/to 成对，采用 [from,to) 半开区间。页面的结束日期换算为下一日00:00，最多覆盖90个自然日。</p>
+<p>集合 GET 与列表项不是授权集合 ETag 的来源。客户端在编辑、授权或删除前必须 GET 目标资源或授权子资源以取得 ETag；列表里的 version 可显示但不能自动覆盖冲突。</p>
+<h3>完整端点目录</h3>
+<div class="table-scroll"><table><thead><tr><th>阶段</th><th>方法</th><th>路径</th><th>用途</th><th>权限</th></tr></thead><tbody>
+<tr><td>RBAC0</td><td>POST</td><td><code>/api/v1/auth/sessions</code></td><td>创建登录会话</td><td><code>PUBLIC</code></td></tr>
+<tr><td>RBAC0</td><td>DELETE</td><td><code>/api/v1/auth/sessions/current</code></td><td>登出当前会话</td><td><code>AUTHENTICATED</code></td></tr>
+<tr><td>RBAC0</td><td>POST</td><td><code>/api/v1/auth/contexts</code></td><td>切换上下文并撤销旧会话</td><td><code>AUTHENTICATED</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/me</code></td><td>获取本人身份</td><td><code>AUTHENTICATED</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/me/systems</code></td><td>获取本人可进入的子系统</td><td><code>AUTHENTICATED</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/me/menus</code></td><td>获取本人当前系统菜单</td><td><code>SYSTEM_MEMBER</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/me/permissions</code></td><td>获取本人当前系统有效权限</td><td><code>SYSTEM_MEMBER</code></td></tr>
+<tr><td>RBAC0</td><td>PUT</td><td><code>/api/v1/me/password</code></td><td>修改本人密码并使旧会话失效</td><td><code>AUTHENTICATED</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/platform/users</code></td><td>分页查询全局账号</td><td><code>PLATFORM_ADMIN</code></td></tr>
+<tr><td>RBAC0</td><td>POST</td><td><code>/api/v1/platform/users</code></td><td>创建全局账号</td><td><code>PLATFORM_ADMIN</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/platform/users/{userId}</code></td><td>读取全局账号与ETag</td><td><code>PLATFORM_ADMIN</code></td></tr>
+<tr><td>RBAC0</td><td>PATCH</td><td><code>/api/v1/platform/users/{userId}</code></td><td>局部修改全局账号</td><td><code>PLATFORM_ADMIN</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/platform/systems</code></td><td>分页查询子系统</td><td><code>PLATFORM_ADMIN</code></td></tr>
+<tr><td>RBAC0</td><td>POST</td><td><code>/api/v1/platform/systems</code></td><td>创建子系统</td><td><code>PLATFORM_ADMIN</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/platform/systems/{sysId}</code></td><td>读取子系统与ETag</td><td><code>PLATFORM_ADMIN</code></td></tr>
+<tr><td>RBAC0</td><td>PATCH</td><td><code>/api/v1/platform/systems/{sysId}</code></td><td>局部修改子系统</td><td><code>PLATFORM_ADMIN</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/systems/{sysId}/members</code></td><td>分页查询系统成员</td><td><code>sys:member:read</code></td></tr>
+<tr><td>RBAC0</td><td>POST</td><td><code>/api/v1/systems/{sysId}/members</code></td><td>创建系统成员</td><td><code>sys:member:create</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/systems/{sysId}/members/{userId}</code></td><td>读取系统成员与ETag</td><td><code>sys:member:read</code></td></tr>
+<tr><td>RBAC0</td><td>PATCH</td><td><code>/api/v1/systems/{sysId}/members/{userId}</code></td><td>局部修改系统成员</td><td><code>sys:member:update</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/systems/{sysId}/roles</code></td><td>分页查询角色</td><td><code>sys:role:read</code></td></tr>
+<tr><td>RBAC0</td><td>POST</td><td><code>/api/v1/systems/{sysId}/roles</code></td><td>创建角色</td><td><code>sys:role:create</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/systems/{sysId}/roles/{roleId}</code></td><td>读取角色与ETag</td><td><code>sys:role:read</code></td></tr>
+<tr><td>RBAC0</td><td>PATCH</td><td><code>/api/v1/systems/{sysId}/roles/{roleId}</code></td><td>局部修改角色</td><td><code>sys:role:update</code></td></tr>
+<tr><td>RBAC0</td><td>DELETE</td><td><code>/api/v1/systems/{sysId}/roles/{roleId}</code></td><td>删除未关联的角色</td><td><code>sys:role:delete</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/systems/{sysId}/permissions</code></td><td>分页查询权限</td><td><code>sys:permission:read</code></td></tr>
+<tr><td>RBAC0</td><td>POST</td><td><code>/api/v1/systems/{sysId}/permissions</code></td><td>创建权限</td><td><code>sys:permission:create</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/systems/{sysId}/permissions/{permissionId}</code></td><td>读取权限与ETag</td><td><code>sys:permission:read</code></td></tr>
+<tr><td>RBAC0</td><td>PATCH</td><td><code>/api/v1/systems/{sysId}/permissions/{permissionId}</code></td><td>局部修改权限</td><td><code>sys:permission:update</code></td></tr>
+<tr><td>RBAC0</td><td>DELETE</td><td><code>/api/v1/systems/{sysId}/permissions/{permissionId}</code></td><td>删除未关联的权限</td><td><code>sys:permission:delete</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/systems/{sysId}/members/{userId}/roles</code></td><td>读取成员角色集合与ETag</td><td><code>sys:member:assign</code></td></tr>
+<tr><td>RBAC0</td><td>PUT</td><td><code>/api/v1/systems/{sysId}/members/{userId}/roles</code></td><td>全量替换成员角色集合</td><td><code>sys:member:assign</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/systems/{sysId}/roles/{roleId}/permissions</code></td><td>读取角色权限集合与ETag</td><td><code>sys:role:grant</code></td></tr>
+<tr><td>RBAC0</td><td>PUT</td><td><code>/api/v1/systems/{sysId}/roles/{roleId}/permissions</code></td><td>全量替换角色权限集合</td><td><code>sys:role:grant</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/platform/audit-logs</code></td><td>分页查询审计日志</td><td><code>PLATFORM_ADMIN</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/platform/audit-logs/{logId}</code></td><td>读取审计详情</td><td><code>PLATFORM_ADMIN</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/systems/{sysId}/audit-logs</code></td><td>分页查询审计日志</td><td><code>sys:audit:read</code></td></tr>
+<tr><td>RBAC0</td><td>GET</td><td><code>/api/v1/systems/{sysId}/audit-logs/{logId}</code></td><td>读取审计详情</td><td><code>sys:audit:read</code></td></tr>
+</tbody></table></div>
+<h3>关键接口示例</h3>
+<p>PUT <code>/api/v1/systems/1/members/4/roles</code>，权限 <code>sys:member:assign</code>，If-Match: <code>&quot;3&quot;</code>。</p>
+<pre><code>{&quot;roleIds&quot;:[&quot;102&quot;,&quot;103&quot;]}</code></pre>
+<p>返回 200 的 data 包含排序后的 roleIds 和新 version <code>&quot;4&quot;</code>，ETag: <code>&quot;4&quot;</code>。重复发送旧 If-Match 可能 412，这是并发前置条件的结果；客户端重新 GET 后，相同集合的 PUT 保持集合不变、无重复关联，也不生成虚假的权限差集审计。对相同集合请求可返回当前版本而不递增策略版本。</p>
+<p>PUT <code>/api/v1/systems/1/roles/102/permissions</code>，权限 <code>sys:role:grant</code>，If-Match: <code>&quot;5&quot;</code>。</p>
+<pre><code>{&quot;permissionIds&quot;:[&quot;1001&quot;,&quot;1002&quot;,&quot;1010&quot;]}</code></pre>
+<p>若任意 ID 属于系统 2，整批 404；若包含操作者没有的有效权限，整批 403；均不改任何关联。不存在权限与异系统权限使用同一提示。</p>
+<p>GET <code>/api/v1/me/permissions</code> 返回当前系统直接角色的有效权限码、directRoleIds 和 policyVersion，不返回角色继承来源。</p>
+<h3>HTTP 与业务层的职责</h3>
+<p>网关负责 TLS、请求体上限、基础限流和 requestId；控制器负责严格字段绑定、参数格式和响应；安全过滤器负责会话和上下文；应用用例负责委派、事务、并发和业务规则；持久层同时带 sys_id 条件和复合外键。不能只依赖前端传来的菜单、permissionCodes 或隐藏按钮。</p>
+<h3>页面数据完整性</h3>
+<p>MemberView 必须返回 userId、sysId、username、displayName、status、accountStatus、roleIds、roleNames、version、createdAt。roleIds 与 roleNames 按角色ID升序对应，包含原始直接指派的停用角色，不代表这些角色当前有效。只读成员列表不需要借用“指派角色”写权限才能显示角色名称。</p>
+<p>权限目录 GET 仍为分页资源；完整管理树须读取全部分页后构建，不能把第一页当全量集合保存。MENU 创建必须提交受控 routePath，ACTION 的 routePath 省略或为 null；type 和 code 创建后不可变。当前可用路由为 /overview、/members、/roles、/permissions、/audit、/profile。</p>
+<p>授权子资源的GET/PUT响应除roleIds或permissionIds与version外，必须返回options。成员角色options含id、code、name、status、builtin、assignable；角色权限options含id、code、name、type、parentId、status、grantable；不可选时可附reason。候选为操作者可委派对象加原已选对象，原已选的停用或不可委派项仍返回。这样只有sys:member:assign或sys:role:grant的操作者也能打开完整授权弹窗，不必额外拥有目录查询权限。保存仍在事务内重新校验，options不是提交凭证。</p></section><section id="doc5"><h2>数据库设计</h2>
+<h3>模型和范式</h3>
+<p>数据库方言为 MySQL 8.0.16+ InnoDB，UTF8MB4，连接 session time_zone 固定 +00:00。RBAC0 的建表脚本是独立新库的非破坏性脚本，不包含 DROP；不替代已有库迁移。本版没有模型扩展迁移。示例数据只用于新建开发库，不写可登录的真实密码。</p>
+<figure><img src="images/er.svg" alt="多系统 RBAC0 实体关系"><figcaption>多系统 RBAC0 实体关系</figcaption></figure>
+<p>用户与系统通过成员表多对多，成员与角色通过用户角色表多对多，角色与权限通过角色权限表多对多。角色、权限拥有 sys_id，关联使用复合外键。例如 <code>(sys_id,role_id)</code> 只能引用相同系统角色；这是应用漏写检查时的第二道边界。</p>
+<p>1NF：ID、名称、状态均为单值；权限 ID 不用逗号字符串保存。2NF：关联表的指派时间依赖完整复合键；成员显示名依赖 (sys_id,user_id)，不能放全局账号。3NF：账号密码、角色名称、系统名称分别保存在所属实体，不在授权表复制。审计的 before/after JSON 是不可变历史快照，刻意冗余，不能拿来做当前权限事实表。缓存是派生数据，不是权威授权源。</p>
+<h3>RBAC0 表清单</h3>
+<div class="table-scroll"><table><thead><tr><th>表</th><th>职责</th><th>关键约束</th></tr></thead><tbody>
+<tr><td>iam_platform_guard</td><td>平台级写入串行锁</td><td>单行 id=1；全局管理员保护和平台全局修改先锁此行。</td></tr>
+<tr><td>iam_user</td><td>全局账号和凭据</td><td>username 唯一、二进制排序；password_hash 不可空；auth_version 与 version 分开。</td></tr>
+<tr><td>iam_system</td><td>业务子系统与策略版本</td><td>code 唯一，policy_version 单调递增；状态启停不物理删除。</td></tr>
+<tr><td>iam_member</td><td>用户在系统内资格</td><td>主键 (sys_id,user_id)，外键用户和系统；成员本地状态。</td></tr>
+<tr><td>iam_role</td><td>系统角色</td><td>主键 id，唯一 (sys_id,id) 供复合引用，唯一 (sys_id,code)；builtin。</td></tr>
+<tr><td>iam_permission</td><td>菜单和逻辑操作</td><td>唯一 (sys_id,code)、复合父节点外键，MENU/ACTION 类型和字段 CHECK。</td></tr>
+<tr><td>iam_user_role</td><td>成员角色集合</td><td>主键 (sys_id,user_id,role_id)，复合外键 member、role；反向索引。</td></tr>
+<tr><td>iam_role_permission</td><td>角色权限集合</td><td>主键 (sys_id,role_id,permission_id)，复合外键 role、permission。</td></tr>
+<tr><td>iam_session</td><td>服务端会话和撤销状态</td><td>session_id 唯一；user_id 外键；平台上下文 sys_id 可空；expires_at、revoked_at、auth_version。</td></tr>
+<tr><td>iam_audit_log</td><td>成功业务变更审计</td><td>sys_id 可空代表平台，actor_id 与 actor_name 快照、target_type、target_id、before_json、after_json、request_id。</td></tr>
+<tr><td>iam_login_log</td><td>登录尝试与拒绝安全事件</td><td>user_id 可空、username 脱敏快照、sys_id、outcome、reason、ip、request_id、created_at。</td></tr>
+</tbody></table></div>
+<p>完整字段类型、长度、空值、默认值、主外键和索引见 <code>database/001_rbac0.sql</code>；生成的 <code>database/data-dictionary.md</code> 逐字段说明。所有业务表的 ID 为服务端生成正 BIGINT，API 转字符串。带 created_by 的表允许初始化时为空；不存在的字段不作为公共约定，不对历史操作人做级联删除。</p>
+<h3>重点完整性规则</h3>
+<ol>
+<li>用户角色同时引用成员和角色，不可让非成员凭空获得角色；只填全局 user_id 不足以建立子系统授权。</li>
+<li>子权限必须引用同系统 MENU；数据库复合外键保证同系统，MENU 类型与无环由事务用例在系统锁内校验。</li>
+<li>关联对象不使用 ON DELETE CASCADE；删除角色前显式解除业务引用并审计，默认 RESTRICT 保留安全边界。</li>
+<li>账号、系统、成员不物理删除，审计不依赖活跃业务行才能读出历史快照。</li>
+<li>DB 应用账号没有 audit 的 UPDATE/DELETE 权限；迁移/运维账号独立。默认脚本提供表结构，权限配置由部署模块完成。</li>
+<li>状态、类型、非负排序、会话到期时间等本地规则用 CHECK；跨行规则（最后管理员、菜单父链无环）由锁内事务保证。</li>
+</ol>
+<h3>索引与查询路径</h3>
+<p><code>iam_user(username)</code> 支持登录及精确添加成员；用户模糊检索不承诺 <code>%keyword%</code> 走 BTree，10 万级演示可接受，性能不满足再限制为前缀或引入检索方案。</p>
+<p>成员按 <code>(sys_id,status,user_id)</code> 过滤分页，角色按 <code>(sys_id,status,id)</code>，权限按 <code>(sys_id,parent_id,sort_order,id)</code> 排导航。UA 的主键便于查询用户所有角色，<code>(sys_id,role_id,user_id)</code> 用于查询某角色的受影响成员。PA 双方向索引用于权限求解和引用检测。日志 <code>(sys_id,created_at,id)</code> 与 <code>(sys_id,actor_id,created_at,id)</code> 支持系统审计。</p>
+<p>分页默认 offset，限制最大 pageSize；日志需要深分页时增加 <code>(created_at,id)</code> 游标，不先承诺 offset 第百万页的性能。每种索引的价值应使用 EXPLAIN 和真实分布验证，不凭索引名宣称已经优化。</p>
+<h3>一致性与事务</h3>
+<p>子系统权限相关写入统一顺序：锁 iam_system 行 → 锁目标 member/role/permission → 校验版本和操作者当前权限 → 写关联差集 → 递增根 version 与 system.policy_version → 写脱敏审计 → 提交。全系统序列化写入适合“读多写少”的权限控制台，限制是同一系统大量写入会排队，需压测后再细分锁；不以复杂度换未经证明的吞吐收益。</p>
+<p>全局账号修改先锁 platform_guard，再锁 user，状态或密码变化递增 auth_version。子系统事务只读用户安全状态，避免反向获取 platform_guard。平台系统修改遵守 guard → system，子系统写遵守 system → 根对象；全局停用与子系统写允许先后提交，但鉴权从主库读取停用状态，不会继续生效。</p>
+<p>读取权限缓存时先读主库安全门和 policy_version=v，求解前后重读版本；若变化则重试一次。快照只允许写入 v 对应键。旧计算晚回填也只污染旧键，下一请求读新版本不会命中旧键。禁止“读旧数据后使用最新版本号写缓存”。</p>
+<h3>生命周期与演示数据</h3>
+<p>001 只建 RBAC0 表；003 提供 2 个系统、5 个账号、每系统 SYS_ADMIN 与业务角色、菜单和操作、跨系统差异指派。密码字段是明确的禁止登录占位值；后端初始化器需从本地安全配置读取初始密码并生成哈希，不能把演示 HTML 的身份选择当作真实凭据。</p>
+<p>归档策略建议：操作日志在线保留 180 天，登录安全日志 90 天；这是项目建议而非已核实法规。定期归档和清理需部署时明确权限及审计，业务 API 不提供删除日志。备份恢复后重建或清空 Redis 权限缓存，再验证 policy_version。</p>
+<h3>SQL 实际检查入口</h3>
+<p>001 和 003 都显式设置会话 time_zone 为 +00:00。003 仅为新开发库种子，不能重复覆盖已有数据。004_rbac0_review.sql 为只读核对脚本，检查11张表、5个账号、2个系统、8个成员、8个角色、36个权限、6条用户角色、54条角色权限和1条演示审计，并查询孤立或跨系统关联。</p>
+<p>本次环境未提供 MySQL 可执行服务，未宣称脚本已在目标数据库执行。外键、CHECK、事务和并发规则仍需在部署数据库按验收清单运行验证。浏览器原型不读取 MySQL。</p></section><section id="doc6"><h2>详细设计与模块分解</h2>
+<h3>分解目标和总体架构</h3>
+<p>本章是共同详细设计底稿。共同评审需求、原型、API、数据库后，按07只分详细功能设计；后文提及的编码和测试条件属于未来实施说明，不是本轮六人任务。每个任务包以相同契约为输入，不允许各模块自行另起字段或响应格式。</p>
+<p>RBAC0 主链为 Controller → 用例事务脚本 → Mapper；安全门与权限求解集中实现，避免在多个业务 Service 中复制。Controller 不组织业务事务，Mapper 不接收可随意为空的 sysId。数据对象仅承载数据，SQL 层负责隔离过滤；这仍是面向功能的分解，即使实现语言使用 Java 类。</p>
+<figure><img src="images/architecture.svg" alt="模块与依赖关系"><figcaption>模块与依赖关系</figcaption></figure>
+<p>建议目录如下，RBAC0 可在单 Maven 工程内使用包边界，避免七天内先搭过多构建模块。本版保持单体包边界，不增加未使用的扩展实现。</p>
+<pre><code>backend/src/main/java/.../rbac/
+  api/                 Controller, DTO, ErrorHandler
+  application/         各模块事务脚本与用例接口
+  security/            身份安全门、上下文、权限拦截
+  persistence/         Mapper 与 PO
+  core/                ID、版本、权限快照等数据契约
+  audit/               同事务审计写入与只读查询
+  config/              装配、连接池、安全配置
+frontend/src/
+  features/auth,platform,members,roles,permissions,audit,profile/
+  shared/api,router,permission,components/</code></pre>
+<h3>模块边界清单</h3>
+<div class="table-scroll"><table><thead><tr><th>编号</th><th>模块</th><th>职责</th><th>依赖</th><th>核心表</th></tr></thead><tbody>
+<tr><td>M00</td><td>基础契约与安全上下文</td><td>统一响应、错误、严格 DTO、requestId、分页、ID 与 ETag、不可变 SysContext</td><td>无业务依赖</td><td>无</td></tr>
+<tr><td>M01</td><td>身份和会话</td><td>登录限流、凭据验证、会话签发撤销、上下文切换、改密</td><td>M00 M02 M03</td><td>user session login_log</td></tr>
+<tr><td>M02</td><td>平台与账号</td><td>子系统、全局账号、平台标记、SYS_ADMIN 初始化、最后管理员保护</td><td>M00 M07</td><td>platform_guard user system</td></tr>
+<tr><td>M03</td><td>成员管理</td><td>本系统成员资格、显示名、启停、全局账号精确匹配</td><td>M00 M02 M07</td><td>member user</td></tr>
+<tr><td>M04</td><td>角色与权限目录</td><td>角色和权限 CRUD、菜单树、内置保护、引用检查</td><td>M00 M03 M07</td><td>role permission</td></tr>
+<tr><td>M05</td><td>授权事务</td><td>成员角色/角色权限替换、并发、委派边界、版本递增</td><td>M03 M04 M06 M07</td><td>user_role role_permission system</td></tr>
+<tr><td>M06</td><td>权限求解和拦截</td><td>每请求安全门、有效权限、菜单投影、版本缓存</td><td>M00 M01 M03 M04</td><td>session member role permission 关联</td></tr>
+<tr><td>M07</td><td>审计与安全日志</td><td>成功变更前后值审计、失败安全事件、范围查询</td><td>M00</td><td>audit_log login_log</td></tr>
+<tr><td>M08</td><td>前端和原型落地</td><td>页面、表单、路由、按钮、API 适配、错误状态</td><td>M00 契约</td><td>不直接访问数据库</td></tr>
+<tr><td>M09</td><td>数据与交付验证</td><td>迁移、初始化器、集成环境、JaCoCo、部署和压测</td><td>全部模块</td><td>全部</td></tr>
+</tbody></table></div>
+<p>M07 不回调 M05；由 M05 在其事务中调用 M07 的 AuditWriter，避免循环依赖。M06 只读权限事实，不调用会发起授权修改的服务。M01 读取成员和安全门数据时经只读端口访问，不在 security 与 auth 包之间相互注入业务服务。</p>
+<h3>核心输入输出端口</h3>
+<pre><code>record SysContext(long actorId, Long sysId, String sessionId,
+                  boolean platformAdmin, String requestId) {}
+record Version(long value) {}
+record AssignmentResult(Set&lt;Long&gt; ids, Version version) {}
+record PermissionSnapshot(long sysId, long userId, long policyVersion,
+                          Set&lt;String&gt; codes, List&lt;MenuItem&gt; menus) {}
+interface AssignmentUseCase {
+  AssignmentResult replaceMemberRoles(SysContext ctx, long userId,
+      Set&lt;Long&gt; roleIds, Version expected);
+  AssignmentResult replaceRolePermissions(SysContext ctx, long roleId,
+      Set&lt;Long&gt; permissionIds, Version expected);
+}
+interface PermissionResolver {
+  PermissionSnapshot resolve(SysContext ctx);
+}
+interface AuditWriter {
+  void appendInCurrentTransaction(AuditChange change);
+}</code></pre>
+<p>以上为设计签名，非已编译源码。SysContext 由可信过滤器生成，禁止从请求 JSON 构造；集合构造时防御性复制。<code>sysId=null</code> 仅代表平台上下文，不表示查询全部系统。平台跨系统查询使用独立平台端口和显式过滤器。</p>
+<h3>M00 基础契约任务包</h3>
+<ol>
+<li>M00.1 建立请求响应 DTO 与 ErrorCode，严格拒绝未知字段；ID 转字符串；时间统一 UTC。</li>
+<li>M00.2 生成 requestId，返回响应头和 body；外部提供的值限制长度字符，不能直接拼日志。</li>
+<li>M00.3 解析分页、sort 白名单、If-Match；缺失 428、格式错误 400、冲突 412。</li>
+<li>M00.4 建 SysContext，过滤器校验后放 request scope，不用全局可变静态变量传递用户。</li>
+</ol>
+<p>输入是 OpenAPI；输出为公共契约包和最小控制器样例。验收覆盖未知字段、超大 ID、无效 ETag、100 以上 pageSize 和非法 sort。禁止把万能 Map 当所有写请求的数据载体。</p>
+<h3>M01 身份与会话任务包</h3>
+<ol>
+<li>M01.1 登录脚本：规范化 username → 账号/IP 限流 → 查用户 → 校验锁定和密码 → 查 sysId/成员 → 创建会话 → 签发 token → 记录结果。不存在账号与错误密码统一提示；哈希比较策略避免明显的用户枚举差异。</li>
+<li>M01.2 会话安全门：校验 token 固定算法、issuer、audience、exp；按 sid 查 session，要求未撤销、未过期、user_id/sys_id/auth_version 与签名字段一致。</li>
+<li>M01.3 上下文切换：校验旧会话，验证目标系统资格，新建会话并撤销旧会话；回滚时不能留下已撤销而无新会话的状态。</li>
+<li>M01.4 登出与改密：登出设置 revoked_at；改密校验旧密码，锁账号更新 hash/authVersion/version，审计不包含密码；返回后重新登录。</li>
+<li>M01.5 失败计数：用户行锁/原子更新失败次数与 locked_until；并发失败不会丢计数。账号/IP 限流可以 Redis 实现，故障时启用保守本地限流，不能取消密码校验。</li>
+</ol>
+<p>输入 LoginRequest、ContextRequest 和认证头；输出 SessionCreated 与 me 信息；持久化边界为会话和账号。验收包含锁定期间正确密码、锁定到期、全局停用、成员停用、系统停用、篡改 sysId、登出、改密旧 token、多实例状态一致。</p>
+<h3>M02 平台与账号任务包</h3>
+<ol>
+<li>M02.1 全局账号列表、创建和属性更新，只允许平台会话；username 唯一由 DB 兜底，重复返回 409。</li>
+<li>M02.2 创建子系统，在同事务插入 system、固定管理 MENU/ACTION 和 SYS_ADMIN、角色权限关联，初始化 policyVersion=1。角色 ID 和权限 ID 均服务端生成，不在后端依赖示例固定数字。</li>
+<li>M02.3 平台管理员可把已有账号加入系统并指派内置角色，沿用 M03/M05 的契约和事务规则，不能通过修改 builtin 字段伪造内置对象。</li>
+<li>M02.4 更新账号/系统锁 guard；影响有效权限的系统变更锁 system 并递增 policyVersion；全局账号安全变更递增 authVersion。</li>
+<li>M02.5 最后管理员保护：guard 锁内读取启用 platform_admin 数量，禁用或降级最后一个则 409；禁止业务 SQL 绕过此写入端口。</li>
+</ol>
+<p>输出账号/系统 CRUD 端点与初始化器；不提供密码重置邮件、物理删除账号和系统。验收包括两个管理员并发互相停用、系统停用后旧会话、重复编码、系统管理员伪造 platformAdmin 字段。</p>
+<h3>M03 成员管理任务包</h3>
+<ol>
+<li>M03.1 分页查询本系统成员，联查全局显示字段，不返回 passwordHash、authVersion 或他系统成员列表。</li>
+<li>M03.2 精确 username 添加已存在全局账号；锁系统行确认可用，插 member，审计并递增 policyVersion。</li>
+<li>M03.3 本地编辑 displayName/status，锁系统和成员，条件匹配 version；不允许修改全局账号字段。</li>
+<li>M03.4 成员停用后保留 UA，页面提示恢复将恢复角色效果；鉴权每次检查 member.status。</li>
+</ol>
+<p>输入路径 sysId、username 或 MemberPatch；输出 MemberView，成员根 ETag 作为后续角色指派版本。验收：A 成员停用不影响 B、添加重复成员、未知用户提示、跨系统 userId、停用仍有受保护 SYS_ADMIN 的场景（系统管理员不得修改，平台管理员可处理）。</p>
+<h3>M04 角色与权限目录任务包</h3>
+<ol>
+<li>M04.1 角色 create/read/patch/delete，编码唯一不可改；读写均带 sys_id。</li>
+<li>M04.2 权限 create/read/patch/delete；校验 MENU routePath 为本地预定义路由键/路径、ACTION 路由为空，父节点为 MENU，同系统且无环；禁止任意外部 URL 或脚本。</li>
+<li>M04.3 菜单投影与权限定义分离：管理页可读完整目录；me/menus 只返回有页面权限的节点及必要的无可点击父容器。</li>
+<li>M04.4 删除检查业务引用：role 检查 UA、PA；permission 检查子节点与 PA；有引用 409，不悄悄级联撤权。</li>
+<li>M04.5 更改已授权角色状态、权限状态、菜单归属需委派检查；若其现有有效权限超出操作者可委派集合，拒绝。SYS_ADMIN角色记录及其用户/权限关联只有平台管理员可变更；权限定义本身按目录操作权限和委派范围管理。</li>
+</ol>
+<p>输出目录端点和树投影函数；验收含父子权限独立、循环父链、同编码跨系统允许、同系统重复拒绝、删除关联冲突、停用再启用效果。</p>
+<h3>M05 授权事务任务包</h3>
+<p>本模块是详细设计和代码评审重点，不只分为“两个关联表 CRUD”。</p>
+<ol>
+<li>M05.1 GET 成员角色集合/角色权限集合，同时读取根 version 并输出 ETag，查询需在同一一致读快照内。</li>
+<li>M05.2 对传入 IDs 去重排序、限制集合最多 1000 项；验证数量和空集合语义。</li>
+<li>M05.3 开事务，按固定顺序锁 system，再锁 member 或 role；使用当前读重验操作者安全状态、有效权限和目标所有权，防止请求开始鉴权后操作者被撤权仍写入。</li>
+<li>M05.4 检查 If-Match、受保护角色、所有对象有效且同系统；成员角色变更必须同时校验旧角色和新角色不含操作者不可管理的受保护对象，不能以清空集合移除 SYS_ADMIN。</li>
+<li>M05.5 委派检查不能只看新集合：对既有角色权限更改也要检查该角色旧有效权限和新有效权限均在操作者可管理范围。</li>
+<li>M05.6 计算 additions/removals，仅修改差集；若无变化直接返回当前版本。否则写关联，根 version+1，system.policy_version+1，写前后集合审计，提交。</li>
+<li>M05.7 提交后可通知其他实例预热缓存；通知失败不影响正确性，因为请求仍读主库版本。不得先改 Redis 再提交 DB。</li>
+</ol>
+<figure><img src="images/assignment-sequence.svg" alt="替换成员角色事务时序"><figcaption>替换成员角色事务时序</figcaption></figure>
+<pre><code>replaceMemberRoles(ctx, userId, desiredIds, expectedVersion):
+  begin transaction READ_COMMITTED
+  sys = lockSystem(ctx.sysId)
+  actor = loadCurrentActorAndPermissions(ctx)   // 当前读，非缓存旧权限
+  member = lockMember(ctx.sysId, userId)
+  require member.version == expectedVersion
+  old = loadRoleIds(ctx.sysId, userId)
+  candidates = loadRolesWithOwnershipCheck(ctx.sysId, desiredIds)
+  validateProtectedAndDelegation(actor, old, candidates)
+  if old == desiredIds: return current result
+  applyDifference(old, desiredIds)
+  increment member.version, sys.policy_version
+  appendAudit(old, desiredIds)                  // 同一数据库事务
+  commit</code></pre>
+<p>竞争测试：T1/T2 同时读 version=7，T1 获得 system 锁提交到 8，T2 获锁后返回 412；若 T1 是撤销 T2 操作者权限，T2 锁内重验必须 403。审计 INSERT 失败时关联、两个版本均回滚。</p>
+<h3>M06 权限求解和拦截任务包</h3>
+<p>RBAC0 求解：先验证 system、user、member、session；读取用户有效 UA 连接 ENABLED role，再连接 PA 与 ENABLED permission，取 code 去重。SYS_ADMIN 使用初始化的明确权限集合；平台管理员在绑定系统上下文中可进入特权分支，但只返回当前系统已注册有效权限，不能返回任意跨系统对象。</p>
+<ol>
+<li>M06.1 统一鉴权注解/路由元数据映射权限码；静态端点元数据可声明多个权限且约定 ALL，不使用运行时客户端传入的 code 决策。</li>
+<li>M06.2 缓存键 <code>perm:{sysId}:{userId}:{policyVersion}</code>。不在其他系统或用户之间复用。</li>
+<li>M06.3 权限求解前后校验版本一致，再缓存；最大重试一次仍频繁变化时回源一致事务或返回 503，不能返回混合快照。</li>
+<li>M06.4 MENU 权限与 ACTION 权限全都加入 code 集合，API 拦截使用 ACTION；不能像参考方案示例只聚合菜单按钮却漏掉后端权限。</li>
+<li>M06.5 me/menus 构建树，补祖先容器时标记 navigable=false；通过受控静态路由字典定位前端组件。</li>
+<li>M06.6 每次被保护资源查询在 Mapper 方法签名强制传 sysId，SQL 使用 <code>WHERE sys_id = :ctxSysId AND id = :id</code>；拦截器并不能替代这一步。</li>
+</ol>
+<p>时间复杂度：RBAC0 遍历用户关联角色及这些角色关联权限，O(Ru+Pu)，Set 去重内存 O(Pu)；缓存命中仍有主库安全门读取。建议 TTL 60 秒并加随机抖动仅回收旧版本，不用 TTL 实现撤权时效。上线前测 DB 安全门吞吐，不能声称这是零数据库访问的 5000 QPS 方案。</p>
+<h3>M07 审计任务包</h3>
+<ol>
+<li>M07.1 AuditChange 明确 actorId/name、sysId、targetType/id、action、before、after、requestId、时间/IP；授权只存白名单 IDs、版本及必要名称快照。</li>
+<li>M07.2 appendInCurrentTransaction 要求已有事务；核心变更审计失败抛错，不降级为控制台打印。</li>
+<li>M07.3 失败鉴权和登录事件不附着失败业务事务，单独有限长日志；安全日志故障告警且不泄露敏感信息，不影响“拒绝”的结果。</li>
+<li>M07.4 平台与系统日志分别查询，sys_id=null 是平台事件；非平台用户不能把 null 当无过滤条件。</li>
+<li>M07.5 展示前后值 JSON，严格文本转义；不允许用户提交日志中的 actorId 和结果字段。</li>
+</ol>
+<p>验收：权限变更前后值、空集合、操作目标系统、分页排序、平台跨系统筛选、日志写入失败回滚，以及脱敏扫描。</p>
+<h3>M08 前端任务包</h3>
+<ol>
+<li>M08.1 登录和上下文状态：只在认证成功后装载 me、menus、permissions；上下文变化清空旧缓存、旧表格和路由，注销撤销会话。</li>
+<li>M08.2 API client 按 OpenAPI 管理路径、string ID、ETag 与错误映射；没有特殊 HTTP 200 错误处理分支。</li>
+<li>M08.3 路由守卫和按钮组件消费权限码；后端 403 仍展示统一状态，不能当作“前端漏隐藏”而取消服务端校验。</li>
+<li>M08.4 账号/系统/成员/角色/权限页面；各表单只发送白名单可写字段，平台字段与成员字段不混用。</li>
+<li>M08.5 授权弹窗完整集合编辑、显式保存、冲突保留输入、刷新比较，不在每勾选一次时发一笔写请求。</li>
+<li>M08.6 审计和个人中心；密码提交后退出；加载、空、错、冲突、无权限、窄屏和键盘流程验证。</li>
+</ol>
+<p>组件建议：SystemSwitcher、PermissionAction、PagedTable、MemberRoleDialog、RolePermissionDialog、AuditDiff、ApiAnnotation。ApiAnnotation 仅评审原型使用。</p>
+<h3>M09 数据与交付任务包</h3>
+<ol>
+<li>M09.1 迁移脚本、可回滚的测试数据库和配置样例；密码从环境或本地秘密配置读取，不能将密钥写入仓库。</li>
+<li>M09.2 写覆盖关键规则的单元与集成测试，MySQL 真事务校验复合外键、锁和 CHECK；不能用 H2 通过就宣称 MySQL 并发正确。</li>
+<li>M09.3 以相同数据对 OpenAPI 做端点冒烟、隔离、重复提交、并发、审计故障测试，生成 JaCoCo。</li>
+<li>M09.4 后续编码阶段提供容器、反向代理和健康检查；部署前明确目标服务器及授权。本次只有设计文件，不宣称部署完成。</li>
+<li>M09.5 按 NFR 场景生成压测数据、运行及导出原始结果，记录目标与实测的差距，不能填假数据。</li>
+</ol>
+<h3>本轮六人详细功能设计分工</h3>
+<p>以07-RBAC0六人分工.adoc为唯一分工基线：A认证会话；B账号/子系统/成员；C角色/权限目录；D直接指派；E权限求解/菜单/鉴权；F审计。每人只交详细设计文档、函数说明与设计图，不分配前端编码、迁移执行、测试、编译或部署。</p>
+<p>本章M08/M09保留为后续实施需求和完成边界，不作为某个人在本轮的设计份额。公共约定见detail-design/00-公共函数与依赖约定.adoc。依赖对齐和设计互审方式见07。</p>
+<h3>状态和 UML 源</h3>
+<figure><img src="images/states.svg" alt="账号和会话状态转换"><figcaption>账号和会话状态转换</figcaption></figure>
+<p><code>uml/use-cases.puml</code>、<code>uml/domain.puml</code>、<code>uml/components.puml</code>、<code>uml/assignment-sequence.puml</code>、<code>uml/states.puml</code> 为可编辑 UML 源；SVG 为本包阅读图。RBAC0 详细类职责通过端口签名、模块表和事务时序描述；所有设计签名都只覆盖 RBAC0。类名和签名是开发设计，不是已生成的可运行后端。</p>
+<h3>后续实施与当前设计的界限</h3>
+<p>第一次检查需要可运行的面向功能后端、服务器部署和JaCoCo；目前未完成。它们列在09的差距清单，不能把本地原型验证报告当后端测试或覆盖率。相关开发和运行任务不在本次六人详细功能设计分工内。</p></section><section id="doc7"><h2>RBAC0 六人详细功能设计分工</h2>
+<h3>只分详细功能设计</h3>
+<p>按老师顺序，需求分析、界面原型、API和数据库是共同输入，本分工只分下一步“详细功能设计（分解）”。每个人按业务功能写处理步骤、输入输出、函数、算法、事务与异常。</p>
+<p>不分配编码、测试用例或执行、编译、构建、部署、CI、JaCoCo，也不把前四步再分别交给某个人。第一次检查仍需实施交付，但不能算进这次六人详细设计分工。</p>
+<p>以下姓名暂用A—F。每人5份文件，共30份；文件路径相对交付包根目录。2026-10-24已按F分工生成对应5份设计文件及F模块代码，需F本人复核；A—E的25份仍待完成。这不是成员已签认的贡献记录。现有docs/06是共同底稿；公共约定已给在docs/detail-design/00-公共函数与依赖约定.adoc。个人文件不能只复制底稿或提交空模板。</p>
+<p>每人主设计和函数说明采用adoc；3张图提交可编辑puml，建议另导出同名SVG阅读。第一次采用面向功能的结构化设计，不强制每人另画一套继承类图。</p>
+<h3>分工总览</h3>
+<div class="table-scroll"><table><thead><tr><th>成员</th><th>主题</th><th>功能边界</th><th>对应需求/模块</th></tr></thead><tbody>
+<tr><td>A</td><td>认证、会话、个人账户</td><td>登录、登出、上下文切换、本人信息、改密、会话失效</td><td>FR-01/11；M01</td></tr>
+<tr><td>B</td><td>账号、子系统、成员</td><td>全局账号、系统创建初始化、系统启停、本地成员维护</td><td>FR-02—04；M02/M03</td></tr>
+<tr><td>C</td><td>角色与权限目录</td><td>角色和权限CRUD、菜单父链、引用检查、内置保护</td><td>FR-05/06；M04</td></tr>
+<tr><td>D</td><td>直接指派事务</td><td>成员角色UA、角色权限PA、差集、并发和委派</td><td>FR-07/08；M05</td></tr>
+<tr><td>E</td><td>权限求解、菜单、鉴权</td><td>有效权限、菜单投影、请求安全门、版本缓存</td><td>FR-09；M06及必要M00</td></tr>
+<tr><td>F</td><td>变更审计与查询</td><td>成功审计、失败安全事件、平台/系统日志查询与详情</td><td>FR-10；M07</td></tr>
+</tbody></table></div>
+<h3>A：认证、会话与个人账户</h3>
+<p>功能分解：A1规范化用户名/限流/凭据/锁定；A2平台与系统资格校验及创建会话；A3校验/退出/过期；A4上下文切换原子替换；A5本人信息及旧密码校验、改密、authVersion失效。本人权限和菜单调用E，不重复实现。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/A-认证会话与个人账户详细设计.adoc</td><td>范围和FR/P/API对应；前后置条件；登录、退出、切换、改密的正常与错误流程；会话与账号读写、失败计数、锁定到期、事务边界、密码脱敏；所选结构化方法和理由。</td></tr>
+<tr><td>docs/detail-design/A-函数说明.adoc</td><td>login、verifyCredentials、checkLoginLock、createSession、validateSession、switchContext、logout、getProfile、changePassword：逐个写设计签名、输入/返回/错误、依赖、读写表、伪代码。切换失败保留旧会话，改密成功失效全部旧会话。</td></tr>
+<tr><td>uml/detail-design/A-认证会话功能结构图.puml</td><td>认证入口逐层分到凭据、资格、会话、本人账户；体现调用关系和公共函数复用。</td></tr>
+<tr><td>uml/detail-design/A-登录与上下文切换流程图.puml</td><td>平台/系统分支、非成员、系统停用、账号停用、锁定、错误凭据、切换失败回滚及成功结果。</td></tr>
+<tr><td>uml/detail-design/A-改密与会话生命周期图.puml</td><td>ACTIVE→REVOKED/EXPIRED、authVersion变化；改密和成功审计的事务；区分全局停用与临时登录锁。</td></tr>
+</tbody></table></div>
+<p>交接：向E提供可信SessionContext与validateSession；从B读取账号/系统/成员状态；从F取得成功审计和失败安全事件端口。完成判据：能按文档走通普通用户登录、平台转系统和改密三条流程，并说明每种失败会改变或回滚哪些状态。</p>
+<h3>B：全局账号、子系统与成员</h3>
+<p>功能分解：B1全局账号查询/新建/更新及username唯一；B2最后平台管理员保护；B3系统查询/新建/编辑/启停和内置目录初始化；B4精确用户名加入成员、本地显示名/状态维护；B5全局/本地状态对授权与会话的影响。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/B-账号子系统与成员详细设计.adoc</td><td>FR-02—04、P03—05与12个资源接口的内部拆分；平台身份与本地成员的权限边界；初始化全部写入及失败原子性；成员版本和恢复启用语义。</td></tr>
+<tr><td>docs/detail-design/B-函数说明.adoc</td><td>listUsers、createUser、updateUser、ensureLastPlatformAdmin、createSystem、bootstrapSystem、updateSystem、addMember、updateMember、getMember等；参数/结果、唯一性、范围、版本、guard锁与根对象锁、读写表及伪代码。</td></tr>
+<tr><td>uml/detail-design/B-平台与成员功能结构图.puml</td><td>全局账号、子系统、本地成员三棵功能子树；区分平台写入口与系统写入口，公共状态查询独立。</td></tr>
+<tr><td>uml/detail-design/B-创建子系统初始化流程图.puml</td><td>system→固定权限→SYS_ADMIN→PA→成功审计→提交；失败全部回滚；首位管理员通过成员与指派用例建立，不新增私有API。</td></tr>
+<tr><td>uml/detail-design/B-账号与成员启停流程图.puml</td><td>全局停用与仅A系统成员停用的区别；最后管理员保护、旧版本冲突、authVersion/policyVersion、保留关联及恢复效果。</td></tr>
+</tbody></table></div>
+<p>交接：向A/E提供状态读取，向D提供成员归属与根version；目录规则参考C，指派规则调用D，审计调用F。完成判据：说明A成员停用为何不影响B、全局停用为何影响所有系统、两个平台管理员互相停用如何保持至少一人有效。</p>
+<h3>C：角色与权限目录</h3>
+<p>功能分解：C1角色查询/新建/编辑/启停/删除；C2权限MENU/ACTION定义；C3路由白名单、同系统MENU父节点与无环；C4UA/PA/子节点引用检查；C5内置保护、委派、状态变化和策略版本。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/C-角色权限目录详细设计.adoc</td><td>FR-05/06、P06/07及10个目录接口；编码系统内唯一且不可改；分页完整树装载；内置对象、停用恢复、删除引用、状态变更的事务和错误分支。</td></tr>
+<tr><td>docs/detail-design/C-函数说明.adoc</td><td>createRole、updateRole、deleteRole、createPermission、updatePermission、deletePermission、validateMenuParent、detectMenuCycle、checkReferences等；函数数据、返回、错误、终止条件、树遍历复杂度、表和锁内步骤。</td></tr>
+<tr><td>uml/detail-design/C-角色权限目录功能结构图.puml</td><td>角色维护、权限维护、菜单校验、引用检查；目录定义不负责D的集合指派或E的最终权限计算。</td></tr>
+<tr><td>uml/detail-design/C-菜单创建编辑流程图.puml</td><td>MENU/ACTION分支、路由必填/禁止、parent归属/类型、成环、版本冲突、审计回滚；每个结束节点写结果。</td></tr>
+<tr><td>uml/detail-design/C-目录删除与启停流程图.puml</td><td>受保护、有引用、可删除三分支；停用保留指派；system→根对象锁、根版本与policyVersion、审计原子性。</td></tr>
+</tbody></table></div>
+<p>交接：给D提供同系统角色/权限查询，给E提供菜单关系与有效目录；委派查询复用E，审计复用F。完成判据：演算A→B→A如何被拒绝、不同系统同编码是否允许、父菜单为何不产生权限继承、停用与删除的区别。</p>
+<h3>D：成员角色与角色权限直接指派</h3>
+<p>功能分解：D1集合与ETag及options读取；D2空集合/重复/排序规范化；D3所有候选同系统与有效性；D4旧/新集合委派与SYS_ADMIN保护；D5锁内重验、差集写入、版本、审计和回滚。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/D-直接指派事务详细设计.adoc</td><td>FR-07/08、P08/09及4个集合接口；原已选停用项仍返回；候选展示与提交校验分离；UA/PA分别用成员/角色根版本；清空、无变化和失败不部分成功。</td></tr>
+<tr><td>docs/detail-design/D-函数说明.adoc</td><td>getMemberRoles、getRolePermissions、buildAssignmentOptions、normalizeIds、validateAssignmentScope、validateDelegation、replaceMemberRoles、replaceRolePermissions、applyDifference；参数/返回/错误、锁前/锁内/提交后步骤、伪代码和数据读写。</td></tr>
+<tr><td>uml/detail-design/D-直接指派功能结构图.puml</td><td>读取集合→候选/规范化→事务→当前权限和对象检查→差集→版本/审计；两个用例的共用函数和不同根对象。</td></tr>
+<tr><td>uml/detail-design/D-成员角色替换时序图.puml</td><td>页面→接口→事务→system/member→E→UA→F→提交；旧ETag、跨系统ID、操作者被撤权、审计失败分支。</td></tr>
+<tr><td>uml/detail-design/D-角色权限替换流程图.puml</td><td>旧/新权限都校验委派；空、重复、无变化、停用、受保护；差集、版本和审计同提交，提交前不改缓存。</td></tr>
+</tbody></table></div>
+<p>交接：A/B/C给上下文和事实；D持有写事务并调用E当前权限、F事务审计。完成判据：手算old={1,2}、desired={2,3}的差集、版本、审计；解释同旧版本并发为何至多一笔成功，以及审计失败为何全部回滚。这里演算设计，不安排编写并发测试。</p>
+<h3>E：有效权限、菜单与统一鉴权</h3>
+<p>功能分解：E1有效UA→有效role→有效PA/permission并集去重；E2菜单与必要祖先容器投影；E3每请求会话/账号/系统/成员/上下文/权限/对象范围安全门；E4版本缓存、重试与故障回源；E5写事务当前权限与委派判定。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/E-权限求解菜单与鉴权详细设计.adoc</td><td>FR-09、me/permissions、me/menus和全部受保护端点的安全门；端点固定权限元数据与ALL语义；平台特权也绑定系统；无角色仍可访问本人中心；缓存和SQL隔离边界。</td></tr>
+<tr><td>docs/detail-design/E-函数说明.adoc</td><td>validateSecurityGate、resolvePermissions、resolveCurrentPermissionsInTransaction、authorize、buildMenus、checkDelegableSet、loadPolicyVersion、getPermissionSnapshot；输入/输出/错误、主库与缓存来源、去重、菜单排序、复杂度与伪代码。</td></tr>
+<tr><td>uml/detail-design/E-权限服务功能结构图.puml</td><td>会话验证复用A、事实读取复用B/C；只读求解、菜单、鉴权、委派；不反向调用D写入。</td></tr>
+<tr><td>uml/detail-design/E-请求鉴权与菜单流程图.puml</td><td>401/403/404/503各发生在哪一步；路径sysId与上下文匹配；对象查询保留sys_id；父容器可见但navigable=false。</td></tr>
+<tr><td>uml/detail-design/E-权限快照与缓存时序图.puml</td><td>读主库版本v→缓存v→求解→重读v→回填；版本变化重试、Redis故障回源、撤权提交与旧计算晚回填的交错。</td></tr>
+</tbody></table></div>
+<p>交接：向C/D提供委派与锁内当前权限端口，向页面提供codes/menus；依赖A/B/C的只读接口，拒绝事件给F。完成判据：演算同一用户在A/B不同集合，解释缓存命中为何仍查安全状态、旧缓存为何不能延长撤权；性能只设计目标，不安排压测。</p>
+<h3>F：变更审计、安全事件与查询</h3>
+<p>功能分解：F1成功审计字段/白名单脱敏/版本及前后集合；F2加入调用方现有事务；F3失败登录/拒绝访问的独立安全事件；F4平台/系统分页日志与详情；F5日期区间、历史快照与纯文本差异展示。</p>
+<div class="table-scroll"><table><thead><tr><th>必须交付的文件</th><th>具体内容</th></tr></thead><tbody>
+<tr><td>docs/detail-design/F-审计记录与查询详细设计.adoc</td><td>FR-10、P10及4个查询接口、内部写端口；平台sysId=null含义；成功/失败事件分流；密码/token不记录；无修改删除日志接口；目标已停用/删除仍能读历史。</td></tr>
+<tr><td>docs/detail-design/F-函数说明.adoc</td><td>buildAuditChange、redactSnapshot、appendAuditInTransaction、recordSecurityEvent、normalizeAuditRange、queryAudit、getAuditDetail、buildAuditDiff；参数/返回/错误、白名单、事务归属、分页排序、UTC转换和伪代码。</td></tr>
+<tr><td>uml/detail-design/F-审计功能结构图.puml</td><td>成功记录、失败安全事件、范围查询、详情投影；调用方给事实，F不重新执行授权或修改UA/PA。</td></tr>
+<tr><td>uml/detail-design/F-同事务审计与回滚时序图.puml</td><td>D变更→F记录→共同提交；审计失败回滚关联和版本；失败安全事件独立记录，不能写成成功业务审计。</td></tr>
+<tr><td>uml/detail-design/F-审计范围查询流程图.puml</td><td>平台/系统身份、sysId、from/to成对、默认近7日、最多90自然日、结束日转次日零点、参数化查询、详情范围及文本转义。</td></tr>
+</tbody></table></div>
+<p>交接：给A/B/C/D提供事务审计，给A/E提供失败事件入口；只读查询接受E验证的上下文。完成判据：说明谁持有事务、谁触发回滚，提供脱敏前后集合样例，演算上海结束日期到UTC半开区间，说明null为何不是“查询全部”的通用参数。</p>
+<h3>每份文件写到什么程度</h3>
+<p>主设计统一章节：功能范围及FR/P/API/表引用；至少三级的功能分解；输入输出和前后置条件；正常与异常流程；数据访问及sys_id条件；事务与锁顺序；版本、状态和隔离；设计方法及理由；依赖端口；待决问题。</p>
+<p>函数说明逐个列：编号、函数名/设计签名、用途、参数类型与约束、结果结构、错误、调用者/被调用者、读写表、是否属于已有事务、关键伪代码。只有函数名或只有Controller/Service/Mapper目录不算详细设计。</p>
+<p>图中名称必须对应正文函数，并有入口、关键判断、失败返回和结束。设计引用现有OpenAPI和SQL，不重新定义字段；如发现契约缺口，记录影响交小组共同修订，不能私改接口。</p>
+<h3>设计依赖与互审</h3>
+<ol>
+<li>先共同读四项基线与公共约定；A/B/C/E/F对齐只读端口和数据，D同步写事务骨架。</li>
+<li>六人各交本人5份设计文件；不重复设计别人端口的内部算法。</li>
+<li>A↔B、C↔E、D↔F做设计互审，关注职责、异常、事务与方法理由。这是设计评审，不是软件测试任务或代码审查分工。</li>
+<li>交接时核对：A上下文给E；B/C事实给D/E；D锁内调E、同事务调F；E不反调D；F只记录事实。各自准备一条完整用例的设计说明，姓名和完成状态按事实填写。</li>
+</ol>
+<p>第一次检查还需要实际后端、服务器、JaCoCo和仓库提交，详见09。这些要求保留在总检查清单中，但不分给这六人的本轮详细功能设计份额。</p></section><section id="doc8"><h2>验收与评审清单</h2>
+<h3>第一次检查的真实门槛</h3>
+<p>已核对评分办法V2的物理第5页：Gitee代码及adoc文档（包括数据库、详细设计）、可运行界面原型、部署在服务器的RBAC0后端、现场运行后端JaCoCo。课程介绍第16页还列明API设计。教师关注需求、问题、设计方法和理由。</p>
+<p>当前只具备设计材料和本地模拟原型。生产后端、数据库实库执行、服务器、JaCoCo、Gitee及课程网站提交尚未完成。完整逐项状态与复核方法见09，不能把下表计划写成已经通过。六人本轮只按07做详细功能设计。</p>
+<h3>设计阶段已经交付的材料</h3>
+<p>需求条目与术语、页面交互与 API 标注、OpenAPI、ER 与 SQL、数据字典、模块任务与事务算法、UML 源、追踪矩阵、可离线阅读的 HTML。校验结果见 <code>validation/report.md</code>。这些是设计与原型交付，不代表生产环境已经通过下表测试。</p>
+<h3>小组人工评审表</h3>
+<div class="table-scroll"><table><thead><tr><th>关口</th><th>检查问题</th><th>评审记录</th></tr></thead><tbody>
+<tr><td>G0 资料</td><td>是否接受多系统、全局账号/本地成员边界？是否按已核实的第一次检查条款逐项准备？</td><td>待评审，填写日期/参与人/结论。</td></tr>
+<tr><td>G1 需求</td><td>每条 FR 是否有场景和验收？范围外是否准确？</td><td>待评审。</td></tr>
+<tr><td>G2 原型</td><td>逐页操作是否满足需求？字段和权限提示是否合理？</td><td>待评审。</td></tr>
+<tr><td>G3 API</td><td>每个控件有端点？方法、字段、错误、ETag 是否统一？</td><td>待评审；以 OpenAPI 为准。</td></tr>
+<tr><td>G4 数据库</td><td>复合外键能防跨系统吗？字段满足所有接口？范式和索引代价能说明吗？</td><td>待评审；需真实 MySQL 执行。</td></tr>
+<tr><td>G5 详细设计</td><td>每人拿到任务能否开始开发？锁顺序、委派和审计可复述吗？</td><td>待评审；明确负责人和复核人。</td></tr>
+</tbody></table></div>
+<h3>后续生产实现必须执行的用例</h3>
+<div class="table-scroll"><table><thead><tr><th>编号</th><th>场景</th><th>期望结果</th></tr></thead><tbody>
+<tr><td>T01</td><td>正常登录、错误密码、5 次失败、到期解锁</td><td>成功会话或统一错误；失败计数并发正确。</td></tr>
+<tr><td>T02</td><td>登出、改密、全局停用后使用旧 token</td><td>401；系统/成员停用为403；不使用缓存跳过状态校验。</td></tr>
+<tr><td>T03</td><td>A token 请求 B 路径；A 请求携 B 的 roleId</td><td>分别403和404；关联零变更。</td></tr>
+<tr><td>T04</td><td>普通用户直接调用管理员 API，隐藏按钮后手工重放</td><td>403；无业务写入，有必要的拒绝日志。</td></tr>
+<tr><td>T05</td><td>同用户在 A/B 角色不同；切换后旧路由和表格</td><td>权限隔离，前端清空旧数据；缓存键不串。</td></tr>
+<tr><td>T06</td><td>成员角色 PUT 空数组、重复 ID、无效 ID</td><td>分别清空、去重、整批拒绝；audit before/after 准确。</td></tr>
+<tr><td>T07</td><td>给角色授予自己没有的权限，修改已有强角色</td><td>403，不能通过分配已有角色或修改其集合绕过委派。</td></tr>
+<tr><td>T08</td><td>同时两个旧 ETag 写入；缺 If-Match</td><td>至多一个成功，另一412；缺失428。</td></tr>
+<tr><td>T09</td><td>操作者先通过过滤器，随后被撤权，再进入写事务</td><td>锁内重验拒绝，不能用旧缓存继续写。</td></tr>
+<tr><td>T10</td><td>强制审计 INSERT 失败，缓存写入失败</td><td>前者事务回滚；后者授权仍提交且主库版本保证正确。</td></tr>
+<tr><td>T11</td><td>旧快照晚回填、多实例、Redis不可用、主库不可用</td><td>旧键不能命中新版本；Redis回源；主库失败503。</td></tr>
+<tr><td>T12</td><td>删除有关联角色/权限、最后平台管理员并发停用</td><td>409 且无部分删除；至少一位有效平台管理员。</td></tr>
+<tr><td>T13</td><td>日志中含HTML、引号、长字段；密码和token扫描</td><td>文本安全显示、严格长度、无敏感凭据。</td></tr>
+<tr><td>T14</td><td>375px布局、键盘弹窗、空/错/冲突态、API映射</td><td>可操作、焦点可见、提示不遮挡操作。</td></tr>
+<tr><td>T15</td><td>按NFR-03执行压力、导出原始结果和环境</td><td>如实记录目标/实测/差距，不以截图计数代替测量。</td></tr>
+</tbody></table></div>
+<h3>模块完成与口试准备</h3>
+<p>每人针对所负责模块准备：需求是什么；为什么这样划分；最危险的失败场景；采用什么方法；付出了什么代价；用哪个测试证明。至少能完整解释一次“页面→API→表→事务→审计→验收”的链路。</p>
+<p>建议口试链路为 FR-07 / P08 / PUT member roles / UA + member + system + audit / M05 / T06 T08 T09 T10。</p></section><section id="doc9"><h2>第一次检查要求与前四步复核</h2>
+<h3>本次结论</h3>
+<p>按老师顺序已逐项复查并修订需求、可运行模拟原型、API契约、ER/SQL与字典，形成V1.2设计基线。它们不是空目录或仅有标题的文档，但仍待小组人工评审签认；数据库脚本没有在真实MySQL执行。第一次检查所需的生产后端、服务器部署、后端JaCoCo和Gitee/课程网站提交尚未完成。</p>
+<p>本轮六人只分详细功能设计，见07。具体课程事实及其出处见00，两份PDF已存入sources便于离线复查。</p>
+<h3>板书顺序与实际文件</h3>
+<figure><img src="images/课堂开发步骤.png" alt="用户提供的课堂板书：四项共同设计后再详细分解"><figcaption>用户提供的课堂板书：四项共同设计后再详细分解</figcaption></figure>
+<div class="table-scroll"><table><thead><tr><th>顺序</th><th>步骤</th><th>实际交付文件（相对包根目录）</th><th>复核结论及边界</th></tr></thead><tbody>
+<tr><td>1</td><td>需求分析 req-spec</td><td>docs/01-需求分析.adoc；02-术语表.adoc；00-资料依据与设计决策.adoc；uml/use-cases.puml；docs/traceability.csv</td><td>11条FR、10个用例规约、业务/非功能/验收规则具备；补第一次检查基线、原文页码、项目自定目标与课程事实区分。需求不是已被老师或全组确认的终稿。</td></tr>
+<tr><td>2</td><td>界面原型</td><td>docs/03-界面原型设计.adoc；prototype/index.html、app.js、demo-data.js；prototype/vue/src/、package.json、package-lock.json、dist/index.html</td><td>原有12类页面/状态可实际操作；补Vue3/TypeScript/Tailwind工程与离线产物。Vue/TS负责宿主及类型化边界，业务视图复用已存在的JS交互引擎，未宣称全量TS重写。两版都只用内存，无真实后端。</td></tr>
+<tr><td>3</td><td>API设计 Apifox</td><td>docs/04-API设计.adoc；api/openapi.json；api/endpoints.csv；api/README-Apifox导入与核对.adoc</td><td>38个端点、请求响应、错误、权限码、ETag、分页、同系统语义具备；使用标准校验器检查。给出Apifox导入核对步骤，未代用户创建/上传线上项目，未实现38个接口。</td></tr>
+<tr><td>4</td><td>数据库设计 ER/SQL</td><td>docs/05-数据库设计.adoc；docs/images/er.svg；uml/domain.puml；database/001_rbac0.sql、003_demo_seed.sql、004_rbac0_review.sql、data-dictionary.md</td><td>11表、约束、复合外键、索引、范式、事务、UTC、演示数据与只读核对齐备；静态一致性已检查。MySQL未实际执行，不能把静态检查叫数据库验收通过。</td></tr>
+<tr><td>后续</td><td>详细设计（分解）</td><td>docs/06-详细设计与模块分解.adoc；07-RBAC0六人分工.adoc；detail-design/00-公共函数与依赖约定.adoc</td><td>共同底稿已给；A—F各5份个人成果的文件名、内容、边界与设计交接明确。30份个人文件待成员实际细化与签认，没有预填完成。</td></tr>
+</tbody></table></div>
+<p>从阅读版目录按需求→原型→API→数据库走一遍即可复查。每项的文件内容存在与机器检查结果，不替代需求合理性、设计方法和取舍的人工评审。</p>
+<h3>四步之间如何串起来</h3>
+<p>以“给成员分配角色”为例：FR-07/UC-06→P05/P08→GET/PUT /api/v1/systems/{sysId}/members/{userId}/roles→iam_member/iam_user_role/iam_role/iam_system/iam_audit_log→D详细事务设计，依赖A/B/C/E/F的已有端口。</p>
+<p>打开弹窗取得成员根ETag和options，提交完整roleIds及If-Match；锁内重验身份、同系统、版本、委派，差集与两个版本及审计共同提交。[]清空，重复ID去重，异系统整批拒绝，无变化不制造审计。页面字段、OpenAPI、SQL与分解算法必须共同维护。完整对应见traceability.csv。</p>
+<h3>小组逐文件检查方法</h3>
+<ol>
+<li>需求：打开阅读版“需求分析”，核对三类身份、多系统、FR-01—11和UC-01—10；逐条找页面、API、表与验收语义。确认没有角色继承、互斥、先决角色或基数约束。</li>
+<li>原型：优先打开prototype/vue/dist/index.html；兼容版为prototype/index.html。以平台管理员进入A，建业务角色，授menu:audit与sys:audit:read，再指派给陈雨；退出后以陈雨进入A看审计入口，再进B比较；回管理员撤销并查前后值。不要刷新，否则内存变更重置。</li>
+<li>原型工程：查看prototype/vue/src/App.vue、types.ts和engine.d.ts；阅读其README说明共享JS引擎边界。npm ci后执行npm run build可复建dist，类型/构建结果见validation/vue-build.json。不要把此构建误认为Java后端编译。</li>
+<li>API：按api/README-Apifox导入与核对.adoc导入openapi.json，确认38端点；找两类授权的GET/PUT、options、空数组、字符串ID、ETag和412/428；对照原型标注。未部署服务时不将请求失败判为设计不存在。</li>
+<li>数据库：先看er.svg，再看001中的member/role/permission及两张关联表，核对sys_id复合外键、版本、MENU/ACTION约束；在全新MySQL8.0.16+开发库依次执行001、003、004，再保留真实结果。003密码是禁用占位，不能用浏览器口令登录后端。此实库步骤目前待执行。</li>
+<li>详细分解：打开07，每人按本人5个明确文件交付；用06与公共约定核对职责，说明设计方法和理由。本次不把编译、测试或部署夹进个人设计份额。</li>
+</ol>
+<h3>距完整第一次检查还缺什么</h3>
+<div class="table-scroll"><table><thead><tr><th>课程要求</th><th>当前事实</th><th>还需要的实际证据</th></tr></thead><tbody>
+<tr><td>界面原型可运行</td><td>本地模拟原型可操作；有Vue工程和构建产物</td><td>小组按评审路径确认交互与需求</td></tr>
+<tr><td>数据库设计</td><td>ER/SQL/字典/事务设计齐备，未实库执行</td><td>目标MySQL的建表、种子及核对结果</td></tr>
+<tr><td>详细设计adoc</td><td>共同底稿和六人细化要求已给；2026-10-24新增F的5份，A—E待完成</td><td>各成员具体函数/算法/图和人工签认</td></tr>
+<tr><td>面向功能RBAC0后端</td><td>已新增F模块Java源码和可运行演示；A—E后端仍待实现/集成</td><td>完整RBAC0后端及跨成员实际联调</td></tr>
+<tr><td>服务器部署</td><td>未部署，无目标服务地址</td><td>可访问服务、版本和运行证据</td></tr>
+<tr><td>现场后端JaCoCo</td><td>F模块已有真实Java测试及JaCoCo；见validation/F-module-report.json</td><td>全组最终后端的现场覆盖率输出，不能只用F代表全系统</td></tr>
+<tr><td>Gitee及课程网站提交</td><td>本轮未执行上传或提交</td><td>代码和adoc仓库、访问权限、课程网站地址/报告</td></tr>
+<tr><td>口试</td><td>提供设计理由底稿，没有预约或实际答辩</td><td>每人能解释需求、问题、设计方法与选择理由</td></tr>
+</tbody></table></div>
+<p>课程没有在上述PDF给出固定覆盖率百分比或QPS门槛；本包的目标值属于项目建议。原V1.2机器检查只证明注明的设计一致性/原型行为/前端工程构建；新增F验证以单独报告为准，不证明完整后端、MySQL、部署或评分通过。</p>
+<h3>本次实际执行的验证</h3>
+<div class="table-scroll"><table><thead><tr><th>对象</th><th>结果</th><th>证据及不证明的内容</th></tr></thead><tbody>
+<tr><td>设计一致性</td><td>43/43通过</td><td>validation/report.md；不是MySQL实库执行或设计合理性的人工签认。</td></tr>
+<tr><td>OpenAPI标准校验</td><td>38个操作通过</td><td>validation/openapi-report.json；修复五个PATCH模型的非法required空数组；不是38个接口已实现。</td></tr>
+<tr><td>独立HTML兼容原型</td><td>56/56交互通过，0脚本异常</td><td>validation/browser-report.json；仅浏览器内存模拟。</td></tr>
+<tr><td>Vue离线原型</td><td>16/16交互通过，0脚本异常，无HTTP请求</td><td>validation/vue-browser-report.json；检查挂载、Tailwind、摘要、开关同步、授权、隔离、审计和375px布局。</td></tr>
+<tr><td>Vue/TS与Vite构建</td><td>实际执行成功，3个离线产物</td><td>validation/vue-build.json含真实步骤、版本、输入与产物SHA-256；类型检查覆盖Vue/TS宿主和引擎边界，未迁移JS业务内部，不是Java编译或JaCoCo。</td></tr>
+</tbody></table></div></section><section id="doc10"><h2>F模块代码与实际验证</h2>
+<p>2026-10-24补充，仅覆盖F：成功审计、独立安全事件、平台/系统四个查询接口，以及真实API日志页面。详细运行命令、目录和交接见<a href="../F-审计模块使用说明.md">F使用说明</a>。</p>
+<h3>文件分类</h3>
+<ul>
+<li>backend/：Java 17、Spring Boot、JDBC、同事务成功审计和独立事务安全事件；测试在src/test，JaCoCo在target/site/jacoco。</li>
+<li>frontend/：Vue 3、TypeScript、Tailwind；真实接口请求、取消旧请求、日期、分页、详情和纯文本差异。</li>
+<li>api/F-audit-openapi.json：从原38接口契约提取的F四接口子集，注明demo Basic和宿主认证边界。</li>
+<li>docs/detail-design/F-*.adoc、uml/detail-design/F-*.puml：原F分工要求的五份设计成果，需成员复核。</li>
+<li>database/F-审计模块集成说明.adoc：复用原有日志表，MySQL时区、权限及对接步骤。</li>
+<li>validation/F-module-report.json：实际构建、测试、覆盖率和浏览器联调证据；validation/F-audit-jacoco/index.html为覆盖率阅读入口。</li>
+</ul>
+<h3>设计方法</h3>
+<p>结构化主流程：参数解析→可信身份→范围策略→日期/筛选规范化→参数化查询→只读投影。写入由调用方事务持有，审计不自行提交。</p>
+<p>面向对象：不可变AuditActor、AuditScope、AuditChange等封装不变量；AuditWriter、AuditRepository、SecurityEventRecorder和AuditIdentity通过端口协作，使用组合与依赖注入。</p>
+<p>函数式：日期、脱敏、ID集合、快照差异使用无I/O纯函数，时钟由调用方传入；不修改传入JSON，不让纯函数处理数据库副作用。</p>
+<h3>验证与边界</h3>
+<p>Maven verify执行真实Java测试并生成JAR与JaCoCo。事务测试使用H2/JDBC，验证业务与成功审计共同回滚、安全事件独立提交。HTTP测试验证系统范围、可信身份、日期分页、脱敏、无写入路由及存储故障；浏览器脚本连接启动后的JAR，没有模拟API响应。</p>
+<p>H2不是MySQL验收。非demo默认拒绝访问；A/E需要提供真正的会话验证、安全状态和实时权限，不能凭前端选择或自报请求头授权。A—E业务、Gitee/课程网站提交和服务器部署不在本次F实现完成范围内。</p></section><section id="doc11"><h2>F：审计记录与查询详细设计</h2>
+<p>版本1.0，2026-10-24。范围为FR-10、P10及M07，复用FR-09的可信身份与上下文；实现只覆盖RBAC0。</p>
+<h3>功能分解及实际位置</h3>
+<p>F1成功变更记录：F1.1验证事件不变量→F1.2按目标白名单取快照→F1.3规范化ID集合/版本→F1.4加入调用方事务写入。代码为application/TransactionalAuditWriter、functional/AuditFunctions和infrastructure/JdbcAuditRepository。</p>
+<p>F2安全事件：F2.1接收有限枚举原因→F2.2脱敏用户名→F2.3独立事务写iam_login_log→F2.4存储失败固定告警并返回false。代码为DefaultSecurityEventRecorder→SecurityEventStore→SecurityEventJdbcRepository。</p>
+<p>F3范围查询：F3.1从认证principal取身份→F3.2验证平台或系统范围→F3.3校验日期/分页/过滤→F3.4参数化计数与分页→F3.5白名单投影输出。代码为web/AuditController→AuditQueryService→AuditAccessPolicy、AuditFunctions及仓储。</p>
+<p>F4详情及差异：F4.1验证范围→F4.2按范围+日志ID查询→F4.3脱敏投影→F4.4页面稳定比较字段并纯文本呈现。后端缺失/异系统对象统一404；前端AuditDiffPanel展示，不新增修改或删除接口。</p>
+<h3>契约与数据</h3>
+<p>四个GET路径与api/openapi.json一致：平台audit-logs及其详情，systems/{sysId}/audit-logs及其详情。成功体为data/requestId，错误体为code/message/requestId/details；JSON中的ID、版本均为字符串。列表默认20、最大100，按created_at DESC/id DESC稳定排序。</p>
+<p>仅使用已有iam_audit_log与iam_login_log。成功记录包含actor历史快照、目标、系统、动作、before/after、requestId、IP、UTC时间；无业务外键，不依赖当前对象继续存在。before/after按目标类型白名单取字段，密码、哈希、token等字段永不持久化或返回；非法遗留快照隐藏为redacted=true。</p>
+<p>平台上下文sysId=null，不等于系统查询的“无过滤”。AuditScope.Platform是显式的平台全局或筛选查询，只有平台会话管理员可用；AuditScope.System必须有正系统ID，并匹配当前principal.sysId。系统查询还要求sys:audit:read，或当前系统上下文中的平台管理员。</p>
+<h3>事务与错误</h3>
+<p>成功审计采用MANDATORY，加入D或其他调用方已有数据库事务。关联、根版本、策略版本与审计由调用方共同提交。任何插入失败、无效快照或ID生成失败会抛出异常；Spring事务代理将已有事务标记为回滚，即便上层捕获异常也不能正常提交。</p>
+<p>失败安全事件使用独立Bean的REQUIRES_NEW；外层失败不抹去拒绝事实。独立写入失败返回false并记录固定告警，不覆盖原拒绝结果。连接池需要为独立事务留连接，示例池大小12；生产容量由真实并发验证决定。</p>
+<p>查询范围与权限错误403，未可信认证401，范围内不存在404，日期和分页422，未知/重复查询字段400，存储不可用503。查询参数只能成为预编译参数，不能作为自由SQL或排序片段。</p>
+<h3>日期与算法</h3>
+<p>normalizeAuditRange输入from/to及显式now，输出UTC半开区间。未传时取上海当天及前6天的零点至次日零点。传入时必须成对、from小于to；以to前一个瞬间所在自然日计算覆盖天数，最多90日。页面将结束日期加一自然日后转UTC，双方语义一致。</p>
+<p>redactSnapshot只接收对象或null；按目标白名单复制可接受类型；ID/版本转正BIGINT字符串，roleIds/permissionIds使用有序集合去重；文本移除控制字符并限制长度，嵌套对象不能借显示名字段绕过白名单。复杂度为O(n+k log k)，k为ID集合规模，最多1000项。</p>
+<p>buildAuditDiff对两个快照字段并集排序，按字段比较，区分缺失与显式null；输出新增/移除/修改的不可变集合。前端另对对象键稳定排序，避免键顺序导致假差异，数组顺序按服务器规范化结果保留。</p>
+<h3>三种设计思想如何落地</h3>
+<p>第一次检查采用面向功能的结构化主线：控制器绑定、用例函数分步、数据访问函数处理SQL。对象化设计用于AuditActor/AuditChange/AuditScope的不变量、仓储与端口职责、事务装配；不是把Java类名本身当作OO设计证明。函数式设计用于无I/O纯函数、不可变结果和组合式投影，副作用留在仓储和事务边界。</p>
+<p>这是一套一致实现，不是宣称已完成三套独立范式后端，也没有加入继承角色、互斥角色等后续RBAC模型。</p>
+<h3>对接与验证边界</h3>
+<p>A/E需要在每请求验证会话、账号、系统、成员和实时权限后提供AuditIdentity；客户端头不能代替。F提供AuditWriter与SecurityEventRecorder给A—D/E使用，不代替他们的业务鉴权或授权写事务。</p>
+<p>独立demo明确启用H2、Basic和固定演示账号；非demo默认拒绝直连，待宿主认证链接入。H2事务和接口测试可以验证本模块逻辑，但不能替代MySQL JSON/索引/权限和部署验证。实际测试、构建和覆盖率以validation/F-module-report.json及报告为准，不预填通过率。</p></section><section id="doc12"><h2>F：函数说明</h2>
+<h3>成功审计与安全事件</h3>
+<div class="table-scroll"><table><thead><tr><th>函数</th><th>输入/输出</th><th>调用及数据</th><th>约束/错误</th></tr></thead><tbody>
+<tr><td>AuditChange构造</td><td>可信AuditActor、action、TargetType、targetId、前后JsonNode→不可变事件</td><td>A/B/C/D提供事实；防御性复制</td><td>动作/目标非法422；不接受客户端直接写入</td></tr>
+<tr><td>appendInCurrentTransaction</td><td>AuditChange→void</td><td>AuditWriter端口；iam_audit_log INSERT</td><td>MANDATORY；无事务失败；任意运行异常回滚调用方业务</td></tr>
+<tr><td>redactSnapshot</td><td>目标类型、JsonNode→新JsonNode/null</td><td>纯函数，无表访问</td><td>字段白名单、类型校验、ID排序去重、限制长度；不修改输入</td></tr>
+<tr><td>recordSecurityEvent</td><td>SecurityEvent→boolean</td><td>A/E或demo拒绝处理→SecurityEventStore</td><td>成功true；独立持久化失败false并告警；原拒绝不变</td></tr>
+<tr><td>appendInNewTransaction</td><td>SecurityEvent→void</td><td>REQUIRES_NEW；iam_login_log INSERT</td><td>必须跨Bean事务代理调用，不与外层成功审计混用</td></tr>
+<tr><td>maskUsername</td><td>原用户名→脱敏文本</td><td>纯函数，最多保留首末字符</td><td>空值为***；清除控制字符</td></tr>
+<tr><td>nextId</td><td>无参数→正long</td><td>可替换AuditIdGenerator</td><td>默认雪花格式；节点0—1023须唯一；时钟回拨或单毫秒容量用尽则失败</td></tr>
+</tbody></table></div>
+<p>成功流程伪代码：要求已有事务；取可信操作者；白名单复制before/after；生成ID和UTC时间；参数化INSERT；由调用方提交。不能在此处先提交、异步发送或吞掉异常。</p>
+<p>安全事件流程伪代码：外层门面调用独立事务Bean；脱敏用户名；INSERT；独立提交；门面捕获记录故障并返回false。业务拒绝由A/E维持，不能依据记录失败转为放行。</p>
+<h3>查询与输出</h3>
+<div class="table-scroll"><table><thead><tr><th>函数</th><th>输入/输出</th><th>调用及数据</th><th>约束/错误</th></tr></thead><tbody>
+<tr><td>CurrentAuditActor.current</td><td>HttpServletRequest→AuditActor</td><td>读取Spring Security principal及服务端requestId/remoteAddr</td><td>principal必须实现AuditIdentity；否则401；不读身份伪造头</td></tr>
+<tr><td>AuditAccessPolicy.authorize</td><td>actor、AuditScope→void</td><td>只读身份事实</td><td>平台/系统上下文、sys:audit:read；不符403</td></tr>
+<tr><td>AuditParameters.query</td><td>request、是否平台→Input</td><td>只绑定明确查询字段</td><td>未知/重复400；非法ID/分页/时间422</td></tr>
+<tr><td>normalizeAuditRange</td><td>from/to/now→Range</td><td>纯函数，无系统时钟读取</td><td>成对、升序、默认7上海自然日、最多90日</td></tr>
+<tr><td>normalizeQuery</td><td>scope/Input/now→Criteria</td><td>纯函数，调用日期规则</td><td>page至少1、size1—100；offset用long避免溢出</td></tr>
+<tr><td>queryAudit</td><td>actor/scope/Input→Page</td><td>范围检查→规范化→仓储</td><td>只读REPEATABLE_READ；计数与记录同快照</td></tr>
+<tr><td>JdbcAuditRepository.query</td><td>Criteria→Page</td><td>iam_audit_log COUNT与SELECT</td><td>强制范围、UTC区间；仅值参数拼入绑定器；稳定倒序</td></tr>
+<tr><td>getAuditDetail</td><td>actor/scope/id→AuditEntry</td><td>先校验范围，再范围+ID查询</td><td>不存在/异系统统一404</td></tr>
+<tr><td>ApiModels.AuditView.from</td><td>AuditEntry→AuditView</td><td>读取结果投影</td><td>ID转字符串；before/after保留null；可选ip为空时省略；遗留快照二次脱敏</td></tr>
+<tr><td>buildAuditDiff</td><td>before/after→差异列表</td><td>后端纯函数及前端对应实现</td><td>有序字段并集；区分缺失/null，不修改输入</td></tr>
+<tr><td>useAuditLogs.load/openDetail</td><td>scope/filters/id→页面状态</td><td>前端真实API访问</td><td>身份/范围变化取消请求并提升代号，旧响应不回填</td></tr>
+</tbody></table></div>
+<p>查询流程伪代码：从认证principal形成actor；将入口显式转为Platform或System范围；鉴权；规范化日期/分页；按sys_id等条件查COUNT及记录；将ID字符串化并对白名单快照投影；返回data/requestId。</p>
+<h3>数据与事务对照</h3>
+<p>成功写只INSERT iam_audit_log；失败安全事件只INSERT iam_login_log；查询只SELECT iam_audit_log。F不更新UA、PA、成员或策略版本，也不提供日志UPDATE/DELETE接口。测试中的business_probe仅用于证明事务原子性，不是生产表。</p></section></main></div></body></html>

@@ -1,0 +1,41 @@
+@startuml
+title 审计范围查询流程
+start
+:读取服务端认证principal;
+if (实现AuditIdentity且已认证?) then (是)
+else (否)
+  :401;
+  stop
+endif
+if (平台入口?) then (是)
+  if (平台管理员且sysId为空?) then (是)
+    :显式Platform范围\n可选系统筛选;
+  else (否)
+    :403 / 独立安全事件;
+    stop
+  endif
+else (系统入口)
+  if (路径sysId等于会话sysId且有审计权限?) then (是)
+    :System范围强制sys_id;
+  else (否)
+    :403 / 独立安全事件;
+    stop
+  endif
+endif
+:校验分页、ID、from/to成对;
+if (未提供日期?) then (是)
+  :默认近7个上海自然日;
+else (否)
+  :检查升序且最多90自然日;
+endif
+:转换UTC半开区间;
+:固定排序 / 参数化SQL;
+if (详情且范围内对象不存在?) then (是)
+  :404;
+  stop
+endif
+:ID字符串化 / 白名单快照投影;
+:data + requestId;
+:Vue纯文本差异展示;
+stop
+@enduml

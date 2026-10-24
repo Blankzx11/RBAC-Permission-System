@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdbcAuditRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.infrastructure</a> &gt; <span class="el_source">JdbcAuditRepository.java</span></div><h1>JdbcAuditRepository.java</h1><pre class="source lang-java linenums">package com.rbac.audit.infrastructure;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rbac.audit.domain.*;
+import com.rbac.audit.port.AuditRepository;
+import org.springframework.dao.DataRetrievalFailureException;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.util.Optional;
+
+@Repository
+public class JdbcAuditRepository implements AuditRepository {
+    private static final String COLUMNS = &quot;id,sys_id,actor_id,actor_name,action,target_type,target_id,before_json,after_json,request_id,ip,created_at&quot;;
+    private final NamedParameterJdbcTemplate jdbc;
+    private final ObjectMapper mapper;
+    private final RowMapper&lt;AuditEntry&gt; rowMapper;
+
+<span class="fc" id="L24">    public JdbcAuditRepository(NamedParameterJdbcTemplate jdbc, ObjectMapper mapper) {</span>
+<span class="fc" id="L25">        this.jdbc = jdbc; this.mapper = mapper;</span>
+<span class="fc" id="L26">        this.rowMapper = (rs, row) -&gt; new AuditEntry(rs.getLong(&quot;id&quot;), rs.getObject(&quot;sys_id&quot;, Long.class),</span>
+<span class="fc" id="L27">            rs.getObject(&quot;actor_id&quot;, Long.class), rs.getString(&quot;actor_name&quot;), rs.getString(&quot;action&quot;),</span>
+<span class="fc" id="L28">            rs.getString(&quot;target_type&quot;), rs.getString(&quot;target_id&quot;), parse(rs.getString(&quot;before_json&quot;)),</span>
+<span class="fc" id="L29">            parse(rs.getString(&quot;after_json&quot;)), rs.getString(&quot;request_id&quot;), rs.getString(&quot;ip&quot;), rs.getTimestamp(&quot;created_at&quot;).toInstant());</span>
+<span class="fc" id="L30">    }</span>
+
+    @Override
+    public void insert(AuditEntry e) {
+<span class="fc" id="L34">        var params = new MapSqlParameterSource().addValue(&quot;id&quot;, e.id()).addValue(&quot;sysId&quot;, e.sysId(), Types.BIGINT)</span>
+<span class="fc" id="L35">            .addValue(&quot;actorId&quot;, e.actorId(), Types.BIGINT).addValue(&quot;actorName&quot;, e.actorName())</span>
+<span class="fc" id="L36">            .addValue(&quot;action&quot;, e.action()).addValue(&quot;targetType&quot;, e.targetType()).addValue(&quot;targetId&quot;, e.targetId())</span>
+<span class="fc" id="L37">            .addValue(&quot;before&quot;, stringify(e.before()), Types.VARCHAR).addValue(&quot;after&quot;, stringify(e.after()), Types.VARCHAR)</span>
+<span class="fc" id="L38">            .addValue(&quot;requestId&quot;, e.requestId()).addValue(&quot;ip&quot;, e.ip(), Types.VARCHAR).addValue(&quot;at&quot;, Timestamp.from(e.createdAt()));</span>
+<span class="fc" id="L39">        jdbc.update(&quot;INSERT INTO iam_audit_log (&quot; + COLUMNS + &quot;) VALUES (:id,:sysId,:actorId,:actorName,:action,:targetType,:targetId,:before,:after,:requestId,:ip,:at)&quot;, params);</span>
+<span class="fc" id="L40">    }</span>
+
+    @Override
+    public AuditQuery.Page&lt;AuditEntry&gt; query(AuditQuery.Criteria criteria) {
+<span class="fc" id="L44">        var params = new MapSqlParameterSource();</span>
+<span class="fc" id="L45">        String where = scopeSql(criteria.scope(), params) + &quot; AND created_at &gt;= :from AND created_at &lt; :to&quot;;</span>
+<span class="fc" id="L46">        params.addValue(&quot;from&quot;, Timestamp.from(criteria.range().from())).addValue(&quot;to&quot;, Timestamp.from(criteria.range().to()));</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">        if (criteria.actorId() != null) { where += &quot; AND actor_id = :actorId&quot;; params.addValue(&quot;actorId&quot;, criteria.actorId()); }</span>
+<span class="fc bfc" id="L48" title="All 2 branches covered.">        if (criteria.action() != null) { where += &quot; AND action = :action&quot;; params.addValue(&quot;action&quot;, criteria.action()); }</span>
+<span class="fc" id="L49">        Long total = jdbc.queryForObject(&quot;SELECT COUNT(*) FROM iam_audit_log WHERE &quot; + where, params, Long.class);</span>
+<span class="fc" id="L50">        params.addValue(&quot;size&quot;, criteria.pageSize()).addValue(&quot;offset&quot;, criteria.offset());</span>
+<span class="fc" id="L51">        var items = jdbc.query(&quot;SELECT &quot; + COLUMNS + &quot; FROM iam_audit_log WHERE &quot; + where + &quot; ORDER BY created_at DESC,id DESC LIMIT :size OFFSET :offset&quot;, params, rowMapper);</span>
+<span class="pc bpc" id="L52" title="1 of 2 branches missed.">        return new AuditQuery.Page&lt;&gt;(items, total == null ? 0 : total, criteria.page(), criteria.pageSize());</span>
+    }
+
+    @Override
+    public Optional&lt;AuditEntry&gt; findById(AuditScope scope, long id) {
+<span class="fc" id="L57">        var params = new MapSqlParameterSource(&quot;id&quot;, id);</span>
+<span class="fc" id="L58">        String where = scopeSql(scope, params) + &quot; AND id = :id&quot;;</span>
+<span class="fc" id="L59">        return jdbc.query(&quot;SELECT &quot; + COLUMNS + &quot; FROM iam_audit_log WHERE &quot; + where, params, rowMapper).stream().findFirst();</span>
+    }
+
+    private String scopeSql(AuditScope scope, MapSqlParameterSource params) {
+<span class="fc bfc" id="L63" title="All 2 branches covered.">        if (scope instanceof AuditScope.System system) { params.addValue(&quot;scopeSysId&quot;, system.sysId()); return &quot;sys_id = :scopeSysId&quot;; }</span>
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">        if (scope instanceof AuditScope.Platform platform) {</span>
+<span class="fc bfc" id="L65" title="All 2 branches covered.">            if (platform.filterSysId() != null) { params.addValue(&quot;scopeSysId&quot;, platform.filterSysId()); return &quot;sys_id = :scopeSysId&quot;; }</span>
+<span class="fc" id="L66">            return &quot;1 = 1&quot;; // 只有经过平台会话鉴权的显式Platform范围可以查询全平台。</span>
+        }
+<span class="nc" id="L68">        throw new IllegalArgumentException(&quot;Audit scope is required&quot;);</span>
+    }
+
+    private JsonNode parse(String json) {
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        if (json == null) return null;</span>
+<span class="fc" id="L73">        try { return mapper.readTree(json); }</span>
+<span class="nc" id="L74">        catch (JsonProcessingException ex) { throw new DataRetrievalFailureException(&quot;Invalid audit snapshot&quot;); }</span>
+    }
+
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">    private String stringify(JsonNode json) { return json == null ? null : json.toString(); }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

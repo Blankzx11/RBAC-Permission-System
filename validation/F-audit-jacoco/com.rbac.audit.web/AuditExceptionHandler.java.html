@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.web</a> &gt; <span class="el_source">AuditExceptionHandler.java</span></div><h1>AuditExceptionHandler.java</h1><pre class="source lang-java linenums">package com.rbac.audit.web;
+
+import com.rbac.audit.domain.*;
+import com.rbac.audit.port.SecurityEventRecorder;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import java.util.Map;
+
+@RestControllerAdvice
+public class AuditExceptionHandler {
+    private final SecurityEventRecorder recorder;
+    private final CurrentAuditActor actors;
+
+<span class="fc" id="L17">    public AuditExceptionHandler(SecurityEventRecorder recorder, CurrentAuditActor actors) { this.recorder = recorder; this.actors = actors; }</span>
+
+    @ExceptionHandler(AuditFailure.class)
+    public ResponseEntity&lt;ApiModels.Error&gt; business(AuditFailure failure, HttpServletRequest request) {
+<span class="fc bfc" id="L21" title="All 2 branches covered.">        if (failure.status() == 403) {</span>
+<span class="fc" id="L22">            AuditActor actor = actors.current(request);</span>
+<span class="fc bfc" id="L23" title="All 2 branches covered.">            var reason = failure.code().equals(&quot;SYSTEM_CONTEXT_MISMATCH&quot;) ? SecurityEvent.Reason.CONTEXT_MISMATCH : SecurityEvent.Reason.FORBIDDEN;</span>
+<span class="fc" id="L24">            recorder.recordSecurityEvent(new SecurityEvent(actor.userId(), actor.displayName(), actor.sysId(), reason, actor.requestId(), actor.ip()));</span>
+        }
+<span class="fc" id="L26">        return ResponseEntity.status(failure.status()).body(new ApiModels.Error(failure.code(), failure.getMessage(), RequestContextFilter.requestId(request), Map.of()));</span>
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity&lt;ApiModels.Error&gt; databaseUnavailable(HttpServletRequest request) {
+<span class="fc" id="L31">        return ResponseEntity.status(503).body(new ApiModels.Error(&quot;SERVICE_UNAVAILABLE&quot;, &quot;日志存储暂不可用&quot;, RequestContextFilter.requestId(request), Map.of()));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

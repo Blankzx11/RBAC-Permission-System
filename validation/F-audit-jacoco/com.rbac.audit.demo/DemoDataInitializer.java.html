@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DemoDataInitializer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.demo</a> &gt; <span class="el_source">DemoDataInitializer.java</span></div><h1>DemoDataInitializer.java</h1><pre class="source lang-java linenums">package com.rbac.audit.demo;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rbac.audit.domain.*;
+import com.rbac.audit.port.AuditWriter;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
+import java.util.Set;
+import java.util.UUID;
+
+@Component
+@Profile(&quot;demo &amp; !test&quot;)
+public class DemoDataInitializer implements ApplicationRunner {
+    private final JdbcTemplate jdbc;
+    private final TransactionTemplate transactions;
+    private final AuditWriter writer;
+    private final ObjectMapper mapper;
+
+<span class="nc" id="L23">    public DemoDataInitializer(JdbcTemplate jdbc, TransactionTemplate transactions, AuditWriter writer, ObjectMapper mapper) {</span>
+<span class="nc" id="L24">        this.jdbc = jdbc; this.transactions = transactions; this.writer = writer; this.mapper = mapper;</span>
+<span class="nc" id="L25">    }</span>
+
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+<span class="nc bnc" id="L29" title="All 2 branches missed.">        if (jdbc.queryForObject(&quot;SELECT COUNT(*) FROM iam_audit_log&quot;, Long.class) &gt; 0) return;</span>
+<span class="nc" id="L30">        var platform = actor(1, &quot;平台管理员&quot;, null, true);</span>
+<span class="nc" id="L31">        var systemA = actor(2, &quot;系统A管理员&quot;, 1L, false);</span>
+<span class="nc" id="L32">        var systemB = actor(3, &quot;系统B管理员&quot;, 2L, false);</span>
+<span class="nc" id="L33">        var changes = java.util.List.of(</span>
+<span class="nc" id="L34">            new AuditChange(platform, &quot;CREATED_SYSTEM&quot;, AuditChange.TargetType.SYSTEM, &quot;1&quot;, null, mapper.readTree(&quot;{\&quot;id\&quot;:\&quot;1\&quot;,\&quot;code\&quot;:\&quot;EDU\&quot;,\&quot;name\&quot;:\&quot;教务系统\&quot;,\&quot;status\&quot;:\&quot;ENABLED\&quot;}&quot;)),</span>
+<span class="nc" id="L35">            new AuditChange(systemA, &quot;MEMBER_ROLES_REPLACED&quot;, AuditChange.TargetType.MEMBER, &quot;4&quot;, mapper.readTree(&quot;{\&quot;roleIds\&quot;:[\&quot;103\&quot;],\&quot;version\&quot;:\&quot;1\&quot;}&quot;), mapper.readTree(&quot;{\&quot;roleIds\&quot;:[\&quot;103\&quot;,\&quot;102\&quot;],\&quot;version\&quot;:\&quot;2\&quot;}&quot;)),</span>
+<span class="nc" id="L36">            new AuditChange(systemA, &quot;ROLE_PERMISSIONS_REPLACED&quot;, AuditChange.TargetType.ROLE, &quot;102&quot;, mapper.readTree(&quot;{\&quot;permissionIds\&quot;:[],\&quot;version\&quot;:\&quot;1\&quot;}&quot;), mapper.readTree(&quot;{\&quot;permissionIds\&quot;:[\&quot;1004\&quot;,\&quot;1023\&quot;],\&quot;version\&quot;:\&quot;2\&quot;}&quot;)),</span>
+<span class="nc" id="L37">            new AuditChange(systemB, &quot;UPDATED_MEMBER&quot;, AuditChange.TargetType.MEMBER, &quot;4&quot;, mapper.readTree(&quot;{\&quot;status\&quot;:\&quot;ENABLED\&quot;}&quot;), mapper.readTree(&quot;{\&quot;status\&quot;:\&quot;DISABLED\&quot;}&quot;))</span>
+        );
+<span class="nc" id="L39">        transactions.executeWithoutResult(status -&gt; changes.forEach(writer::appendInCurrentTransaction));</span>
+<span class="nc" id="L40">    }</span>
+
+    private AuditActor actor(long id, String name, Long systemId, boolean platform) {
+<span class="nc" id="L43">        return new AuditActor(id, name, systemId, platform, Set.of(&quot;sys:audit:read&quot;), UUID.randomUUID().toString(), &quot;127.0.0.1&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

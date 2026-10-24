@@ -1,0 +1,24 @@
+= RBAC0 API导入与核对
+
+权威契约为本目录openapi.json（OpenAPI3.0.3）；endpoints.csv和docs/api-endpoint-catalog.adoc由同一来源生成，当前38端点，仅RBAC0。它们是设计文件，不是已经实现的后端。
+
+== 导入
+
+. 在自己的Apifox项目中选择导入数据，按OpenAPI/Swagger文件导入，选择本包api/openapi.json。
+. 先看导入预览：应为38个HTTP操作；核对Bearer认证、模型、路径参数和响应，不在已有生产项目盲目覆盖同名接口。
+. 当前servers指向待实现的localhost:8080。只有后端实际启动并确认地址后，才配置运行环境和发请求；不要把浏览器内存数据当服务器数据。
+. 保存导入结果或项目导出文件供本组评审。本次仅提供文件，没有代用户创建云端项目或上传账号资料。
+
+== 重点检查
+
+账号与子系统为platform范围；成员/角色/权限/授权带systems/{sysId}；本人资源为me。两类授权均有GET集合/候选/ETag与PUT完整集合，[]表示清空。所有JSON ID和版本为十进制字符串。
+
+PATCH/集合PUT/DELETE要求If-Match；缺失428，旧版本412；无权限403，当前系统内不存在或异系统ID404。GET授权options包含原已选但不可选项目，不会因候选隐藏而静默丢失原指派。MENU必须受控routePath，ACTION不得设置路由。
+
+对照P08查成员角色接口，对照P09查角色权限接口，对照P10查平台/系统审计查询；再以数据库复合外键核对同系统规则。完整字段以OpenAPI为准，不在Apifox另改一套字段后不回写基线。
+
+== 本地标准校验
+
+scripts/validate_openapi.cjs使用@apidevtools/swagger-parser对文件进行规范和引用校验；validation/openapi-report.json保存真实运行结果。标准校验不能证明业务实现正确。导入后仍应人工核对页面、权限、错误和字段语义。
+
+参考：https://docs.apifox.com/import-openapi-swagger[Apifox官方OpenAPI/Swagger导入说明]；界面入口随版本可能变化，以“OpenAPI/Swagger文件导入”为准。

@@ -1,0 +1,99 @@
+= API 设计
+
+== 契约位置和资源风格
+
+权威机器契约为 `api/openapi.json`，OpenAPI3.0.3，版本1.2.0。`api/endpoints.csv`由同一数据生成，含方法、路径、阶段、权限、请求/响应。所有路径以/api/v1开头，仅38个RBAC0端点。已使用标准校验器校验，结果见validation/openapi-report.json；未向第三方平台导入，Apifox文件导入与人工核对见api/README-Apifox导入与核对.adoc。
+
+平台资源 `/platform/users`、`/platform/systems`、`/platform/audit-logs` 只接受平台管理员的平台会话。系统资源 `/systems/{sysId}/...` 绑定当前系统会话。`/me` 资源表示当前认证主体，不接受通过 userId 查询他人的个人信息。
+
+GET 查询；POST 新建；PATCH 局部修改属性；PUT 全量替换授权集合或密码；DELETE 删除无引用角色/权限或结束会话。集合 PUT 中 `[]` 是清空，不是忽略字段；缺少该字段返回 422。
+
+== 身份认证和隔离
+
+登录 POST sessions 请求 username、password、可选 sysId。不传 sysId 只允许平台管理员进入平台。返回 accessToken、tokenType、expiresIn、sessionId、sysId；token 含 sub、sid、sysId、authVersion、exp、iss、aud，不嵌入长期权限集合。
+
+受保护请求发送 `Authorization: Bearer <accessToken>`。访问 token 建议有效期 30 分钟，C1 不实现 refresh token。服务端仍校验会话存活与账号安全版本；JWT 签名正确并不等于有权限。浏览器演示原型没有真实 token；生产建议 token 仅存内存，经 HTTPS 使用，避免写日志。
+
+POST contexts 在已有会话基础上重新校验目标 sysId，平台上下文用 null，返回新会话并撤销旧会话。GET me/systems 只列出本人启用成员关系的启用系统；平台管理员可列全部，但访问系统仍需绑定上下文。
+
+系统接口先验证方法权限，再按 sys_id 查询对象；路径系统与 token 不同返回 403，路径系统相同而对象属于别的系统返回 404。平台管理员的特权分支不能省略对象 sys_id 过滤。
+
+== 请求和响应规范
+
+时间使用 ISO 8601 UTC，例如 `2026-10-20T02:00:00Z`，页面显示 Asia/Shanghai。ID 与版本使用 1 至 9223372036854775807 的十进制字符串，状态固定 ENABLED/DISABLED。未知字段拒绝。子系统请求不得写入 platformAdmin、sysId、builtin；平台账号创建和修改接口可以按契约维护 platformAdmin，须校验平台身份和最后管理员保护。
+
+成功体固定 `{data, requestId}`，列表的 data 固定 `{items,total,page,pageSize}`；创建返回 201 和 Location。DELETE、改密返回 204 且无响应体。资源 GET 返回 ETag；PATCH、PUT 授权和 DELETE 要求 If-Match，集合 PUT 与根资源共享版本。
+
+[source,json]
+----
+{"data":{"roleIds":["102","103"],"version":"7","options":[{"id":"102","code":"MEMBER_MANAGER","name":"成员管理员","status":"ENABLED","builtin":false,"assignable":true},{"id":"103","code":"READER","name":"成员查看员","status":"ENABLED","builtin":false,"assignable":true}]},"requestId":"req-a81"}
+----
+
+PATCH字段逐个可选但至少提交一个可写字段（minProperties=1）；空对象拒绝。生成器已修复OpenAPI3.0不允许required空数组的问题，无固定必填字段时省略required关键字。
+
+错误体为 `{code,message,requestId,details}`，以 HTTP 状态表达错误；details 可包含 fieldErrors、violations、currentVersion。不得把所有错误包成 HTTP 200。
+
+[source,json]
+----
+{"code":"VERSION_CONFLICT","message":"资源已被修改，请刷新后重试","requestId":"req-a82","details":{"currentVersion":"8"}}
+----
+
+[cols="1,2,4",options="header"]
+|===
+|HTTP |业务码 |处理语义
+|400 |BAD_REQUEST |JSON 或查询语法错误、未知排序字段。
+|401 |UNAUTHENTICATED |未登录、token 失效、登出会话、账号 authVersion 不符。
+|403 |FORBIDDEN / SYSTEM_CONTEXT_MISMATCH |已认证但无操作权限、成员或系统停用、超出委派集合。
+|404 |NOT_FOUND |当前系统范围内找不到资源；异系统 ID 同样处理。
+|409 |DUPLICATE / RESOURCE_IN_USE / RESOURCE_DISABLED / PROTECTED_RESOURCE / MENU_CYCLE |重名、仍有引用、候选对象停用、受保护或菜单成环。
+|412 |VERSION_CONFLICT |If-Match 与根资源当前版本不一致。
+|422 |VALIDATION_ERROR |字段长度、枚举、密码规则、跨字段规则不合法。
+|423 |ACCOUNT_LOCKED |登录达到失败阈值，暂时锁定。
+|428 |PRECONDITION_REQUIRED |应携带 If-Match 的请求未携带。
+|429 |RATE_LIMITED |登录或接口限流，返回 Retry-After。
+|503 |SERVICE_UNAVAILABLE |主库安全门不可用；拒绝绕过鉴权。
+|===
+
+== 查询约定
+
+page 从 1 开始；pageSize 默认 20、最大 100；keyword 最多 64 字符；状态过滤为 ENABLED/DISABLED。账号/角色默认按 id 倒序，sort 按资源取白名单：成员为 userId、createdAt、username，其余按资源取 id、createdAt、name 或 username；成员默认 userId，其余默认 id；不接收 SQL 片段。审计支持 from/to、actorId、action、平台额外支持 sysId；默认近 7 个上海时区自然日；from/to 成对，采用 [from,to) 半开区间。页面的结束日期换算为下一日00:00，最多覆盖90个自然日。
+
+集合 GET 与列表项不是授权集合 ETag 的来源。客户端在编辑、授权或删除前必须 GET 目标资源或授权子资源以取得 ETag；列表里的 version 可显示但不能自动覆盖冲突。
+
+== 完整端点目录
+
+include::api-endpoint-catalog.adoc[]
+
+== 关键接口示例
+
+PUT `/api/v1/systems/1/members/4/roles`，权限 `sys:member:assign`，If-Match: `"3"`。
+
+[source,json]
+----
+{"roleIds":["102","103"]}
+----
+
+返回 200 的 data 包含排序后的 roleIds 和新 version `"4"`，ETag: `"4"`。重复发送旧 If-Match 可能 412，这是并发前置条件的结果；客户端重新 GET 后，相同集合的 PUT 保持集合不变、无重复关联，也不生成虚假的权限差集审计。对相同集合请求可返回当前版本而不递增策略版本。
+
+PUT `/api/v1/systems/1/roles/102/permissions`，权限 `sys:role:grant`，If-Match: `"5"`。
+
+[source,json]
+----
+{"permissionIds":["1001","1002","1010"]}
+----
+
+若任意 ID 属于系统 2，整批 404；若包含操作者没有的有效权限，整批 403；均不改任何关联。不存在权限与异系统权限使用同一提示。
+
+GET `/api/v1/me/permissions` 返回当前系统直接角色的有效权限码、directRoleIds 和 policyVersion，不返回角色继承来源。
+
+== HTTP 与业务层的职责
+
+网关负责 TLS、请求体上限、基础限流和 requestId；控制器负责严格字段绑定、参数格式和响应；安全过滤器负责会话和上下文；应用用例负责委派、事务、并发和业务规则；持久层同时带 sys_id 条件和复合外键。不能只依赖前端传来的菜单、permissionCodes 或隐藏按钮。
+
+== 页面数据完整性
+
+MemberView 必须返回 userId、sysId、username、displayName、status、accountStatus、roleIds、roleNames、version、createdAt。roleIds 与 roleNames 按角色ID升序对应，包含原始直接指派的停用角色，不代表这些角色当前有效。只读成员列表不需要借用“指派角色”写权限才能显示角色名称。
+
+权限目录 GET 仍为分页资源；完整管理树须读取全部分页后构建，不能把第一页当全量集合保存。MENU 创建必须提交受控 routePath，ACTION 的 routePath 省略或为 null；type 和 code 创建后不可变。当前可用路由为 /overview、/members、/roles、/permissions、/audit、/profile。
+
+授权子资源的GET/PUT响应除roleIds或permissionIds与version外，必须返回options。成员角色options含id、code、name、status、builtin、assignable；角色权限options含id、code、name、type、parentId、status、grantable；不可选时可附reason。候选为操作者可委派对象加原已选对象，原已选的停用或不可委派项仍返回。这样只有sys:member:assign或sys:role:grant的操作者也能打开完整授权弹窗，不必额外拥有目录查询权限。保存仍在事务内重新校验，options不是提交凭证。

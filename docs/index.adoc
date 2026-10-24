@@ -1,0 +1,31 @@
+= 多系统 RBAC0 权限管理系统设计文档
+:toc: left
+:toclevels: 3
+:sectnums:
+:imagesdir: images
+
+include::00-资料依据与设计决策.adoc[leveloffset=+1]
+
+include::01-需求分析.adoc[leveloffset=+1]
+
+include::02-术语表.adoc[leveloffset=+1]
+
+include::03-界面原型设计.adoc[leveloffset=+1]
+
+include::04-API设计.adoc[leveloffset=+1]
+
+include::05-数据库设计.adoc[leveloffset=+1]
+
+include::06-详细设计与模块分解.adoc[leveloffset=+1]
+
+include::07-RBAC0六人分工.adoc[leveloffset=+1]
+
+include::08-验收与评审清单.adoc[leveloffset=+1]
+
+include::09-第一次检查要求与前四步复核.adoc[leveloffset=+1]
+
+include::10-F模块实现与验证.adoc[leveloffset=+1]
+
+include::detail-design/F-审计记录与查询详细设计.adoc[leveloffset=+1]
+
+include::detail-design/F-函数说明.adoc[leveloffset=+1]

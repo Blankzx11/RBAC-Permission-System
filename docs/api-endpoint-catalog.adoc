@@ -1,0 +1,42 @@
+[cols="1,1,4,3,2",options="header"]
+|===
+|阶段 |方法 |路径 |用途 |权限
+|RBAC0 |POST |`/api/v1/auth/sessions` |创建登录会话 |`PUBLIC`
+|RBAC0 |DELETE |`/api/v1/auth/sessions/current` |登出当前会话 |`AUTHENTICATED`
+|RBAC0 |POST |`/api/v1/auth/contexts` |切换上下文并撤销旧会话 |`AUTHENTICATED`
+|RBAC0 |GET |`/api/v1/me` |获取本人身份 |`AUTHENTICATED`
+|RBAC0 |GET |`/api/v1/me/systems` |获取本人可进入的子系统 |`AUTHENTICATED`
+|RBAC0 |GET |`/api/v1/me/menus` |获取本人当前系统菜单 |`SYSTEM_MEMBER`
+|RBAC0 |GET |`/api/v1/me/permissions` |获取本人当前系统有效权限 |`SYSTEM_MEMBER`
+|RBAC0 |PUT |`/api/v1/me/password` |修改本人密码并使旧会话失效 |`AUTHENTICATED`
+|RBAC0 |GET |`/api/v1/platform/users` |分页查询全局账号 |`PLATFORM_ADMIN`
+|RBAC0 |POST |`/api/v1/platform/users` |创建全局账号 |`PLATFORM_ADMIN`
+|RBAC0 |GET |`/api/v1/platform/users/{userId}` |读取全局账号与ETag |`PLATFORM_ADMIN`
+|RBAC0 |PATCH |`/api/v1/platform/users/{userId}` |局部修改全局账号 |`PLATFORM_ADMIN`
+|RBAC0 |GET |`/api/v1/platform/systems` |分页查询子系统 |`PLATFORM_ADMIN`
+|RBAC0 |POST |`/api/v1/platform/systems` |创建子系统 |`PLATFORM_ADMIN`
+|RBAC0 |GET |`/api/v1/platform/systems/{sysId}` |读取子系统与ETag |`PLATFORM_ADMIN`
+|RBAC0 |PATCH |`/api/v1/platform/systems/{sysId}` |局部修改子系统 |`PLATFORM_ADMIN`
+|RBAC0 |GET |`/api/v1/systems/{sysId}/members` |分页查询系统成员 |`sys:member:read`
+|RBAC0 |POST |`/api/v1/systems/{sysId}/members` |创建系统成员 |`sys:member:create`
+|RBAC0 |GET |`/api/v1/systems/{sysId}/members/{userId}` |读取系统成员与ETag |`sys:member:read`
+|RBAC0 |PATCH |`/api/v1/systems/{sysId}/members/{userId}` |局部修改系统成员 |`sys:member:update`
+|RBAC0 |GET |`/api/v1/systems/{sysId}/roles` |分页查询角色 |`sys:role:read`
+|RBAC0 |POST |`/api/v1/systems/{sysId}/roles` |创建角色 |`sys:role:create`
+|RBAC0 |GET |`/api/v1/systems/{sysId}/roles/{roleId}` |读取角色与ETag |`sys:role:read`
+|RBAC0 |PATCH |`/api/v1/systems/{sysId}/roles/{roleId}` |局部修改角色 |`sys:role:update`
+|RBAC0 |DELETE |`/api/v1/systems/{sysId}/roles/{roleId}` |删除未关联的角色 |`sys:role:delete`
+|RBAC0 |GET |`/api/v1/systems/{sysId}/permissions` |分页查询权限 |`sys:permission:read`
+|RBAC0 |POST |`/api/v1/systems/{sysId}/permissions` |创建权限 |`sys:permission:create`
+|RBAC0 |GET |`/api/v1/systems/{sysId}/permissions/{permissionId}` |读取权限与ETag |`sys:permission:read`
+|RBAC0 |PATCH |`/api/v1/systems/{sysId}/permissions/{permissionId}` |局部修改权限 |`sys:permission:update`
+|RBAC0 |DELETE |`/api/v1/systems/{sysId}/permissions/{permissionId}` |删除未关联的权限 |`sys:permission:delete`
+|RBAC0 |GET |`/api/v1/systems/{sysId}/members/{userId}/roles` |读取成员角色集合与ETag |`sys:member:assign`
+|RBAC0 |PUT |`/api/v1/systems/{sysId}/members/{userId}/roles` |全量替换成员角色集合 |`sys:member:assign`
+|RBAC0 |GET |`/api/v1/systems/{sysId}/roles/{roleId}/permissions` |读取角色权限集合与ETag |`sys:role:grant`
+|RBAC0 |PUT |`/api/v1/systems/{sysId}/roles/{roleId}/permissions` |全量替换角色权限集合 |`sys:role:grant`
+|RBAC0 |GET |`/api/v1/platform/audit-logs` |分页查询审计日志 |`PLATFORM_ADMIN`
+|RBAC0 |GET |`/api/v1/platform/audit-logs/{logId}` |读取审计详情 |`PLATFORM_ADMIN`
+|RBAC0 |GET |`/api/v1/systems/{sysId}/audit-logs` |分页查询审计日志 |`sys:audit:read`
+|RBAC0 |GET |`/api/v1/systems/{sysId}/audit-logs/{logId}` |读取审计详情 |`sys:audit:read`
+|===

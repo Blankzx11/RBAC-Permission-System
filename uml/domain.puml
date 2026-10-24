@@ -1,0 +1,38 @@
+@startuml
+class User {
+  id : Long
+  username : String
+  authVersion : Long
+}
+class System {
+  id : Long
+  policyVersion : Long
+}
+class Member {
+  sysId : Long
+  userId : Long
+  version : Long
+}
+class Role {
+  sysId : Long
+  id : Long
+  code : String
+  version : Long
+}
+class Permission {
+  sysId : Long
+  id : Long
+  code : String
+  type : PermissionType
+}
+class Session {
+  sessionId : String
+  sysId : Long
+}
+User "1" -- "0..*" Member
+System "1" -- "0..*" Member
+Member "0..*" -- "0..*" Role : UA同系统
+Role "0..*" -- "0..*" Permission : PA同系统
+User "1" -- "0..*" Session
+note bottom : 这是分析领域关系；C1行为由事务脚本组织。
+@enduml

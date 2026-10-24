@@ -13,3 +13,30 @@ target/
 # 系统
 .DS_Store
 *.log
+
+
+# RBAC0 delivery: local caches, work files and transient screenshots
+__pycache__/
+*.pyc
+.work/
+.history/
+.codex/
+.agents/
+validation/*-preview.png
+validation/*-failure.png
+docs/images/design-reader.png
+
+# Keep the named reviewed delivery and the offline prototype build
+*.zip
+!deliverables/
+!deliverables/RBAC0-需求与设计交付包.zip
+!prototype/vue/dist/
+!prototype/vue/dist/index.html
+!prototype/vue/dist/rbac0-prototype.js
+!prototype/vue/dist/rbac0-prototype.css
+
+
+# F audit module: reviewed source bundle and actual API frontend build
+!deliverables/RBAC0-F审计模块代码包.zip
+!frontend/dist/
+!frontend/dist/**

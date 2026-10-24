@@ -1,0 +1,32 @@
+@startuml
+title F 审计功能结构分解
+top to bottom direction
+rectangle "F 审计模块" as F
+rectangle "F1 成功审计\nappendInCurrentTransaction" as Success
+rectangle "F2 安全事件\nrecordSecurityEvent" as Security
+rectangle "F3 范围查询\nqueryAudit / getAuditDetail" as Query
+rectangle "F4 详情投影\nAuditView / buildAuditDiff" as View
+rectangle "白名单/ID规范化\nredactSnapshot" as Redact
+rectangle "独立事务\nappendInNewTransaction" as NewTx
+rectangle "上下文与权限\nAuditAccessPolicy" as Access
+rectangle "日期和分页\nnormalizeQuery" as Params
+database "iam_audit_log" as Audit
+database "iam_login_log" as Login
+F --> Success
+F --> Security
+F --> Query
+F --> View
+Success --> Redact
+Success --> Audit : 调用方现有事务内INSERT
+Security --> NewTx
+NewTx --> Login : REQUIRES_NEW INSERT
+Query --> Access
+Query --> Params
+Query --> Audit : 受范围约束的SELECT
+View --> Redact
+note bottom of F
+结构化用例负责顺序与副作用
+对象负责不变量与端口职责
+纯函数负责确定性转换
+end note
+@enduml

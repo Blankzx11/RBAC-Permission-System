@@ -1,0 +1,68 @@
+= 第一次检查要求与前四步复核
+:imagesdir: images
+
+== 本次结论
+
+按老师顺序已逐项复查并修订需求、可运行模拟原型、API契约、ER/SQL与字典，形成V1.2设计基线。它们不是空目录或仅有标题的文档，但仍待小组人工评审签认；数据库脚本没有在真实MySQL执行。第一次检查所需的生产后端、服务器部署、后端JaCoCo和Gitee/课程网站提交尚未完成。
+
+本轮六人只分详细功能设计，见07。具体课程事实及其出处见00，两份PDF已存入sources便于离线复查。
+
+== 板书顺序与实际文件
+
+image::课堂开发步骤.png[用户提供的课堂板书：四项共同设计后再详细分解]
+
+[cols="1,2,4,4",options="header"]
+|===
+|顺序 |步骤 |实际交付文件（相对包根目录） |复核结论及边界
+|1 |需求分析 req-spec |docs/01-需求分析.adoc；02-术语表.adoc；00-资料依据与设计决策.adoc；uml/use-cases.puml；docs/traceability.csv |11条FR、10个用例规约、业务/非功能/验收规则具备；补第一次检查基线、原文页码、项目自定目标与课程事实区分。需求不是已被老师或全组确认的终稿。
+|2 |界面原型 |docs/03-界面原型设计.adoc；prototype/index.html、app.js、demo-data.js；prototype/vue/src/、package.json、package-lock.json、dist/index.html |原有12类页面/状态可实际操作；补Vue3/TypeScript/Tailwind工程与离线产物。Vue/TS负责宿主及类型化边界，业务视图复用已存在的JS交互引擎，未宣称全量TS重写。两版都只用内存，无真实后端。
+|3 |API设计 Apifox |docs/04-API设计.adoc；api/openapi.json；api/endpoints.csv；api/README-Apifox导入与核对.adoc |38个端点、请求响应、错误、权限码、ETag、分页、同系统语义具备；使用标准校验器检查。给出Apifox导入核对步骤，未代用户创建/上传线上项目，未实现38个接口。
+|4 |数据库设计 ER/SQL |docs/05-数据库设计.adoc；docs/images/er.svg；uml/domain.puml；database/001_rbac0.sql、003_demo_seed.sql、004_rbac0_review.sql、data-dictionary.md |11表、约束、复合外键、索引、范式、事务、UTC、演示数据与只读核对齐备；静态一致性已检查。MySQL未实际执行，不能把静态检查叫数据库验收通过。
+|后续 |详细设计（分解） |docs/06-详细设计与模块分解.adoc；07-RBAC0六人分工.adoc；detail-design/00-公共函数与依赖约定.adoc |共同底稿已给；A—F各5份个人成果的文件名、内容、边界与设计交接明确。30份个人文件待成员实际细化与签认，没有预填完成。
+|===
+
+从阅读版目录按需求→原型→API→数据库走一遍即可复查。每项的文件内容存在与机器检查结果，不替代需求合理性、设计方法和取舍的人工评审。
+
+== 四步之间如何串起来
+
+以“给成员分配角色”为例：FR-07/UC-06→P05/P08→GET/PUT /api/v1/systems/{sysId}/members/{userId}/roles→iam_member/iam_user_role/iam_role/iam_system/iam_audit_log→D详细事务设计，依赖A/B/C/E/F的已有端口。
+
+打开弹窗取得成员根ETag和options，提交完整roleIds及If-Match；锁内重验身份、同系统、版本、委派，差集与两个版本及审计共同提交。[]清空，重复ID去重，异系统整批拒绝，无变化不制造审计。页面字段、OpenAPI、SQL与分解算法必须共同维护。完整对应见traceability.csv。
+
+== 小组逐文件检查方法
+
+. 需求：打开阅读版“需求分析”，核对三类身份、多系统、FR-01—11和UC-01—10；逐条找页面、API、表与验收语义。确认没有角色继承、互斥、先决角色或基数约束。
+. 原型：优先打开prototype/vue/dist/index.html；兼容版为prototype/index.html。以平台管理员进入A，建业务角色，授menu:audit与sys:audit:read，再指派给陈雨；退出后以陈雨进入A看审计入口，再进B比较；回管理员撤销并查前后值。不要刷新，否则内存变更重置。
+. 原型工程：查看prototype/vue/src/App.vue、types.ts和engine.d.ts；阅读其README说明共享JS引擎边界。npm ci后执行npm run build可复建dist，类型/构建结果见validation/vue-build.json。不要把此构建误认为Java后端编译。
+. API：按api/README-Apifox导入与核对.adoc导入openapi.json，确认38端点；找两类授权的GET/PUT、options、空数组、字符串ID、ETag和412/428；对照原型标注。未部署服务时不将请求失败判为设计不存在。
+. 数据库：先看er.svg，再看001中的member/role/permission及两张关联表，核对sys_id复合外键、版本、MENU/ACTION约束；在全新MySQL8.0.16+开发库依次执行001、003、004，再保留真实结果。003密码是禁用占位，不能用浏览器口令登录后端。此实库步骤目前待执行。
+. 详细分解：打开07，每人按本人5个明确文件交付；用06与公共约定核对职责，说明设计方法和理由。本次不把编译、测试或部署夹进个人设计份额。
+
+== 距完整第一次检查还缺什么
+
+[cols="1,4,3",options="header"]
+|===
+|课程要求 |当前事实 |还需要的实际证据
+|界面原型可运行 |本地模拟原型可操作；有Vue工程和构建产物 |小组按评审路径确认交互与需求
+|数据库设计 |ER/SQL/字典/事务设计齐备，未实库执行 |目标MySQL的建表、种子及核对结果
+|详细设计adoc |共同底稿和六人细化要求已给；2026-10-24新增F的5份，A—E待完成 |各成员具体函数/算法/图和人工签认
+|面向功能RBAC0后端 |已新增F模块Java源码和可运行演示；A—E后端仍待实现/集成 |完整RBAC0后端及跨成员实际联调
+|服务器部署 |未部署，无目标服务地址 |可访问服务、版本和运行证据
+|现场后端JaCoCo |F模块已有真实Java测试及JaCoCo；见validation/F-module-report.json |全组最终后端的现场覆盖率输出，不能只用F代表全系统
+|Gitee及课程网站提交 |本轮未执行上传或提交 |代码和adoc仓库、访问权限、课程网站地址/报告
+|口试 |提供设计理由底稿，没有预约或实际答辩 |每人能解释需求、问题、设计方法与选择理由
+|===
+
+课程没有在上述PDF给出固定覆盖率百分比或QPS门槛；本包的目标值属于项目建议。原V1.2机器检查只证明注明的设计一致性/原型行为/前端工程构建；新增F验证以单独报告为准，不证明完整后端、MySQL、部署或评分通过。
+
+== 本次实际执行的验证
+
+[cols="2,3,4",options="header"]
+|===
+|对象 |结果 |证据及不证明的内容
+|设计一致性 |43/43通过 |validation/report.md；不是MySQL实库执行或设计合理性的人工签认。
+|OpenAPI标准校验 |38个操作通过 |validation/openapi-report.json；修复五个PATCH模型的非法required空数组；不是38个接口已实现。
+|独立HTML兼容原型 |56/56交互通过，0脚本异常 |validation/browser-report.json；仅浏览器内存模拟。
+|Vue离线原型 |16/16交互通过，0脚本异常，无HTTP请求 |validation/vue-browser-report.json；检查挂载、Tailwind、摘要、开关同步、授权、隔离、审计和375px布局。
+|Vue/TS与Vite构建 |实际执行成功，3个离线产物 |validation/vue-build.json含真实步骤、版本、输入与产物SHA-256；类型检查覆盖Vue/TS宿主和引擎边界，未迁移JS业务内部，不是Java编译或JaCoCo。
+|===

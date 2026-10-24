@@ -1,0 +1,36 @@
+= RBAC0 详细功能设计公共基线
+
+状态：已有共同底稿，A—F个人详细设计尚待按07细化、互审和签认。
+
+== 自顶向下分解
+
+入口分为认证会话、平台/成员维护、角色权限目录、直接指派、只读鉴权、审计六组业务函数。HTTP适配只绑定参数/响应，用例函数掌握事务，数据访问显式接收sysId。数据结构承载事实，不设计角色继承或互斥约束。
+
+[cols="2,4,3",options="header"]
+|===
+|公共数据 |字段/语义 |提供者
+|SessionContext |actorId、sysId（平台可空）、sid、platformAdmin、requestId；不能直接信任请求JSON |A产生，E检查安全门
+|Version |正BIGINT字符串；HTTP带双引号ETag；集合共用所属成员/角色根version |B/C/D
+|PermissionSnapshot |sysId、userId、policyVersion、codes、menus |E，只读派生快照
+|AssignmentResult |排序去重ids、version、options；空ids清空，options不是凭证 |D
+|AuditChange |actor、sysId、target、action、before/after、requestId、UTC时间 |调用方提供事实，F脱敏写入
+|Failure |HTTP语义、业务码、message、requestId、details |复用OpenAPI，不能全部200
+|===
+
+== 端口与依赖
+
+[cols="1,3,4",options="header"]
+|提供者 |端口 |约束
+|A |validateSession→SessionContext |供E使用；不依赖旧权限缓存证明会话有效
+|B |loadUserState/loadSystemState/loadMemberState |供A/E及D锁内当前读；显式范围与主库来源
+|C |loadRolesInSystem/loadPermissionsInSystem/checkReferences |供D/E；未知和异系统ID统一不存在
+|D |replaceMemberRoles/replaceRolePermissions |持有写事务；锁内调E，同事务调F
+|E |resolvePermissions/resolveCurrentPermissionsInTransaction/checkDelegableSet |事务内入口不读旧缓存；不调D写用例
+|F |appendAuditInTransaction/recordSecurityEvent |成功记录加入调用方事务；失败事件独立且不改变拒绝结果
+|===
+
+== 事务与失败规则
+
+平台锁guard→user或guard→system；系统锁system→member/role/permission根。锁后重验身份、状态、归属、权限和版本。差集、根version、policyVersion与审计共同提交或回滚；无变化无虚假差集审计。缓存提交后随版本切换。ID字符串、UTC、分页、HTTP错误以OpenAPI为准；null系统仅指平台上下文，不能作无过滤查询。
+
+A—F还需在个人文件补算法、输入输出和异常分支。本基线只固定协作，不冒充30份个人文件已完成。

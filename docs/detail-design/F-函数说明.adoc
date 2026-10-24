@@ -1,0 +1,43 @@
+= F：函数说明
+
+== 成功审计与安全事件
+
+[cols="2,3,3,4",options="header"]
+|===
+|函数 |输入/输出 |调用及数据 |约束/错误
+|AuditChange构造 |可信AuditActor、action、TargetType、targetId、前后JsonNode→不可变事件 |A/B/C/D提供事实；防御性复制 |动作/目标非法422；不接受客户端直接写入
+|appendInCurrentTransaction |AuditChange→void |AuditWriter端口；iam_audit_log INSERT |MANDATORY；无事务失败；任意运行异常回滚调用方业务
+|redactSnapshot |目标类型、JsonNode→新JsonNode/null |纯函数，无表访问 |字段白名单、类型校验、ID排序去重、限制长度；不修改输入
+|recordSecurityEvent |SecurityEvent→boolean |A/E或demo拒绝处理→SecurityEventStore |成功true；独立持久化失败false并告警；原拒绝不变
+|appendInNewTransaction |SecurityEvent→void |REQUIRES_NEW；iam_login_log INSERT |必须跨Bean事务代理调用，不与外层成功审计混用
+|maskUsername |原用户名→脱敏文本 |纯函数，最多保留首末字符 |空值为***；清除控制字符
+|nextId |无参数→正long |可替换AuditIdGenerator |默认雪花格式；节点0—1023须唯一；时钟回拨或单毫秒容量用尽则失败
+|===
+
+成功流程伪代码：要求已有事务；取可信操作者；白名单复制before/after；生成ID和UTC时间；参数化INSERT；由调用方提交。不能在此处先提交、异步发送或吞掉异常。
+
+安全事件流程伪代码：外层门面调用独立事务Bean；脱敏用户名；INSERT；独立提交；门面捕获记录故障并返回false。业务拒绝由A/E维持，不能依据记录失败转为放行。
+
+== 查询与输出
+
+[cols="2,3,3,4",options="header"]
+|===
+|函数 |输入/输出 |调用及数据 |约束/错误
+|CurrentAuditActor.current |HttpServletRequest→AuditActor |读取Spring Security principal及服务端requestId/remoteAddr |principal必须实现AuditIdentity；否则401；不读身份伪造头
+|AuditAccessPolicy.authorize |actor、AuditScope→void |只读身份事实 |平台/系统上下文、sys:audit:read；不符403
+|AuditParameters.query |request、是否平台→Input |只绑定明确查询字段 |未知/重复400；非法ID/分页/时间422
+|normalizeAuditRange |from/to/now→Range |纯函数，无系统时钟读取 |成对、升序、默认7上海自然日、最多90日
+|normalizeQuery |scope/Input/now→Criteria |纯函数，调用日期规则 |page至少1、size1—100；offset用long避免溢出
+|queryAudit |actor/scope/Input→Page |范围检查→规范化→仓储 |只读REPEATABLE_READ；计数与记录同快照
+|JdbcAuditRepository.query |Criteria→Page |iam_audit_log COUNT与SELECT |强制范围、UTC区间；仅值参数拼入绑定器；稳定倒序
+|getAuditDetail |actor/scope/id→AuditEntry |先校验范围，再范围+ID查询 |不存在/异系统统一404
+|ApiModels.AuditView.from |AuditEntry→AuditView |读取结果投影 |ID转字符串；before/after保留null；可选ip为空时省略；遗留快照二次脱敏
+|buildAuditDiff |before/after→差异列表 |后端纯函数及前端对应实现 |有序字段并集；区分缺失/null，不修改输入
+|useAuditLogs.load/openDetail |scope/filters/id→页面状态 |前端真实API访问 |身份/范围变化取消请求并提升代号，旧响应不回填
+|===
+
+查询流程伪代码：从认证principal形成actor；将入口显式转为Platform或System范围；鉴权；规范化日期/分页；按sys_id等条件查COUNT及记录；将ID字符串化并对白名单快照投影；返回data/requestId。
+
+== 数据与事务对照
+
+成功写只INSERT iam_audit_log；失败安全事件只INSERT iam_login_log；查询只SELECT iam_audit_log。F不更新UA、PA、成员或策略版本，也不提供日志UPDATE/DELETE接口。测试中的business_probe仅用于证明事务原子性，不是生产表。
