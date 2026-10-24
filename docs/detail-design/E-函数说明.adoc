@@ -1,0 +1,84 @@
+= E：权限求解、菜单与鉴权函数说明
+
+== 函数总览
+
+[cols="2,2,3,3",options="header"]
+|===
+|函数 |实现类/方法 |输入 |输出
+|validateSecurityGate |SessionGate.authenticate |HttpServletRequest |SessionContext 或 401/403
+|resolvePermissions |PermissionService.resolve |SessionContext |EffectivePermissions
+|resolveCurrentPermissionsInTransaction |RbacService 写事务内的版本/ID校验 + PermissionService.authorize |SessionContext、权限码 |boolean
+|authorize |PermissionService.authorize |SessionContext、permissionCode |boolean
+|buildMenus |PermissionService.buildMenus |SessionContext |List<MenuItem>
+|checkDelegableSet |RbacService.validateRoleIds / validatePermissionIds |SessionContext、sysId、ID 集合 |通过或错误
+|loadPolicyVersion |PermissionService.loadPolicyVersion |sysId |long
+|getPermissionSnapshot |PermissionService.resolve |SessionContext |EffectivePermissions
+|===
+
+== validateSecurityGate
+
+签名：`SessionContext authenticate(HttpServletRequest request)`
+
+读取请求头 Bearer token；查询 `iam_session + iam_user + iam_system + iam_member`。检查会话未撤销/未过期、账号启用、`auth_version` 一致、系统启用、成员启用。成功后将不可变上下文放入请求属性，控制器不得再次信任客户端传入的 userId/sysId。
+
+错误：缺 token/会话无效 401；系统停用、非成员 403；数据库不可用 503。
+
+== resolvePermissions
+
+签名：`EffectivePermissions resolve(SessionContext context)`
+
+伪代码：
+
+[source,text]
+----
+v1 = loadPolicyVersion(sysId)
+repeat at most 2 times:
+  codes = query enabled permission codes through enabled UA/PA
+  roleIds = query direct role ids
+  v2 = loadPolicyVersion(sysId)
+  if v1 == v2:
+    cache.put(key(sysId,userId,v2), codes)
+    return snapshot
+  v1 = v2
+throw 503
+----
+
+平台管理员分支返回当前系统全部 ENABLED 权限，不返回其他系统权限。集合使用 TreeSet/LinkedHashSet 去重并稳定排序。
+
+== authorize
+
+签名：`boolean authorize(SessionContext context, String permissionCode)`
+
+先确认该 code 在当前系统存在且启用；平台管理员返回 true。普通用户从版本化缓存或一致快照取得集合后执行 `contains(code)`。不接收客户端传入的“当前权限”，防止篡改。
+
+== buildMenus
+
+签名：`List<MenuItem> buildMenus(SessionContext context)`
+
+从有效码集合筛选 MENU；对授权 ACTION 补父菜单；递归补祖先；构建树并设置 `navigable`。只读 `iam_permission`，不产生授权副作用。
+
+== checkDelegableSet
+
+签名：`void validateRoleIds(SessionContext, long sysId, List<Long> roleIds)` 与 `void validatePermissionIds(long sysId, List<Long> permissionIds)`
+
+先去重排序，再逐项检查同系统存在性。角色集合额外检查角色 ENABLED；内置 SYS_ADMIN 只允许平台管理员指派。任何未知或异系统 ID 整批拒绝，不允许部分成功。
+
+== loadPolicyVersion
+
+签名：`long loadPolicyVersion(long sysId)`
+
+查询 `iam_system.policy_version`。系统不存在或停用返回 403。该版本是权限快照一致性和缓存键的唯一依据。
+
+== getPermissionSnapshot
+
+签名：`EffectivePermissions resolve(SessionContext context)`
+
+返回字段：`sysId/userId/policyVersion/permissionCodes/directRoleIds`。响应使用字符串承载 BIGINT ID 与版本，避免 JavaScript 精度丢失。
+
+== 事务与异常
+
+* 关联集合替换失败时整个事务回滚，包括版本递增和审计。
+* 版本冲突返回 412；缺少 If-Match 返回 428。
+* 无变化不写审计、不递增版本。
+* 审计写入与业务变更同事务，审计失败导致业务回滚。
+* 权限事实读取异常不写缓存，返回 503。

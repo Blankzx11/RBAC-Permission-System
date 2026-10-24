@@ -1,0 +1,42 @@
+@startuml
+title E 权限服务功能结构
+skinparam packageStyle rectangle
+
+actor "页面/受保护请求" as Client
+package "安全入口" {
+  [SessionGate\nvalidateSecurityGate] as Gate
+  [AuthorizationInterceptor\nauthorize] as Interceptor
+}
+package "权限求解" {
+  [PermissionService\nresolvePermissions] as Resolve
+  [PolicyCache\nperm:sys:user:version] as Cache
+  [MenuProjector\nbuildMenus] as Menu
+}
+package "权限事实" {
+  [iam_session / iam_user] as SessionFacts
+  [iam_system / iam_member] as ScopeFacts
+  [iam_role / iam_permission] as PermissionFacts
+}
+package "写事务" {
+  [RbacService\ncheckDelegableSet] as Delegable
+  [角色权限替换] as RoleGrant
+  [成员角色替换] as MemberAssign
+  [审计写入] as Audit
+}
+
+Client --> Interceptor
+Interceptor --> Gate
+Gate --> SessionFacts
+Gate --> ScopeFacts
+Interceptor --> Resolve
+Resolve --> PermissionFacts
+Resolve --> Cache
+Client --> Menu
+Menu --> Resolve
+Menu --> PermissionFacts
+Delegable --> PermissionFacts
+RoleGrant --> PermissionFacts
+MemberAssign --> PermissionFacts
+RoleGrant --> Audit
+MemberAssign --> Audit
+@enduml
