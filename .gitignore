@@ -34,3 +34,9 @@ docs/images/design-reader.png
 !prototype/vue/dist/index.html
 !prototype/vue/dist/rbac0-prototype.js
 !prototype/vue/dist/rbac0-prototype.css
+
+
+# F audit module: reviewed source bundle and actual API frontend build
+!deliverables/RBAC0-F审计模块代码包.zip
+!frontend/dist/
+!frontend/dist/**

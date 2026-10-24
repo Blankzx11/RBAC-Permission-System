@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiModels.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.web</a> &gt; <span class="el_source">ApiModels.java</span></div><h1>ApiModels.java</h1><pre class="source lang-java linenums">package com.rbac.audit.web;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.rbac.audit.domain.*;
+import com.rbac.audit.functional.AuditFunctions;
+import java.time.Instant;
+import java.util.Map;
+
+public final class ApiModels {
+    private ApiModels() { }
+<span class="fc" id="L12">    public record Success&lt;T&gt;(T data, String requestId) { }</span>
+<span class="fc" id="L13">    public record Error(String code, String message, String requestId, Map&lt;String, Object&gt; details) { }</span>
+<span class="fc" id="L14">    public record AuditView(String id, String sysId, String actorId, String actorName, String action,</span>
+                            String targetType, String targetId, JsonNode before, JsonNode after,
+                            String requestId, Instant createdAt, @JsonInclude(JsonInclude.Include.NON_NULL) String ip) {
+        public static AuditView from(AuditEntry e) {
+<span class="fc" id="L18">            return new AuditView(Long.toString(e.id()), nullableId(e.sysId()), nullableId(e.actorId()), e.actorName(), e.action(),</span>
+<span class="fc" id="L19">                e.targetType(), e.targetId(), safeSnapshot(e.targetType(), e.before()), safeSnapshot(e.targetType(), e.after()), e.requestId(), e.createdAt(), e.ip());</span>
+        }
+    }
+<span class="fc bfc" id="L22" title="All 2 branches covered.">    private static String nullableId(Long value) { return value == null ? null : value.toString(); }</span>
+
+    private static JsonNode safeSnapshot(String type, JsonNode value) {
+<span class="pc bpc" id="L25" title="1 of 4 branches missed.">        if (value == null || value.isNull()) return null;</span>
+<span class="fc" id="L26">        try { return AuditFunctions.redactSnapshot(AuditChange.TargetType.valueOf(type), value); }</span>
+<span class="fc" id="L27">        catch (IllegalArgumentException | AuditFailure ex) {</span>
+            // 遗留快照字段不可信时隐藏内容，不把潜在凭据返回页面。
+<span class="fc" id="L29">            return com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode().put(&quot;redacted&quot;, true);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

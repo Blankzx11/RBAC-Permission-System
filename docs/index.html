@@ -1,6 +1,6 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>多系统 RBAC0 设计文档</title><style>
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:#20324a;background:#f5f7fb;font:15px/1.85 "Segoe UI","Microsoft YaHei",sans-serif}header{background:#183557;color:white;padding:40px max(25px,calc((100vw - 1200px)/2))}header h1{font-size:30px;margin:0 0 10px}header p{margin:0;color:#c6d6ec}header a{color:#e4efff} .layout{display:grid;grid-template-columns:240px minmax(0,960px);gap:30px;max-width:1260px;margin:30px auto;padding:0 20px}nav{position:sticky;top:18px;align-self:start;display:grid;gap:8px}nav a{font-size:13px;color:#4c6487;text-decoration:none;padding:6px 0}main{min-width:0}section{background:white;border:1px solid #e0e7f0;border-radius:10px;padding:32px;margin-bottom:25px;scroll-margin-top:15px}h2{font-size:25px;border-bottom:1px solid #dce4ef;padding-bottom:15px;margin:0 0 24px}h3{font-size:20px;margin-top:32px;color:#294d7b}h4{font-size:17px}p{overflow-wrap:anywhere}a{color:#285bdd}code{font:13px/1.7 Consolas,monospace;background:#eff3f9;padding:2px 4px;border-radius:4px;overflow-wrap:anywhere}pre{background:#f0f4fa;padding:17px;overflow:auto;border-radius:8px;white-space:pre-wrap}pre code{padding:0;background:transparent}.table-scroll{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px;line-height:1.75}th,td{border:1px solid #dce4ee;padding:10px 12px;text-align:left;vertical-align:top;min-width:80px}th{background:#e9f0fb;color:#29466e}tr:nth-child(even){background:#fafbfd}figure{margin:25px 0}figure img{display:block;width:100%;height:auto;background:white}figcaption{font-size:12px;color:#60758f;text-align:center}.links{margin-top:18px;display:flex;gap:20px;flex-wrap:wrap}li{margin:7px 0}@media(max-width:850px){.layout{display:block}nav{position:static;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:8px 18px}section{padding:22px 18px}header h1{font-size:25px}table{min-width:620px}}@media print{header{color:#000;background:#fff;padding:0}header p{color:#333}nav{display:none}.layout{display:block;margin:0;padding:0}section{border:0;padding:0;break-before:page}h2,h3{break-after:avoid}table{font-size:10px}figure{break-inside:avoid}a{color:#000}}
-</style></head><body><header><h1>多系统 RBAC0 权限管理系统</h1><p>需求 · 原型 · API · 数据库 · 详细设计与任务分解</p><p>修订稿 V1.2 / 2026-10-21 / 仅多系统 RBAC0</p><div class="links"><a href="../prototype/vue/dist/index.html">打开Vue工程原型 ↗</a><a href="../api/openapi.json">OpenAPI 契约</a><a href="../database/data-dictionary.md">数据字典</a><a href="traceability.csv">需求追踪矩阵</a><a href="../validation/report.md">验证记录</a></div></header><div class="layout"><nav><a href="#doc0">00 资料依据与设计决策</a><a href="#doc1">01 需求分析</a><a href="#doc2">02 术语表</a><a href="#doc3">03 界面原型设计</a><a href="#doc4">04 API 设计</a><a href="#doc5">05 数据库设计</a><a href="#doc6">06 详细设计与模块分解</a><a href="#doc7">07 RBAC0 六人详细功能设计分工</a><a href="#doc8">08 验收与评审清单</a><a href="#doc9">09 第一次检查要求与前四步复核</a></nav><main><section id="doc0"><h2>资料依据与设计决策</h2>
+</style></head><body><header><h1>多系统 RBAC0 权限管理系统</h1><p>需求 · 原型 · API · 数据库 · 详细设计与任务分解</p><p>修订稿 V1.2 / 2026-10-21 / 仅多系统 RBAC0</p><div class="links"><a href="../prototype/vue/dist/index.html">打开Vue工程原型 ↗</a><a href="../api/openapi.json">OpenAPI 契约</a><a href="../database/data-dictionary.md">数据字典</a><a href="traceability.csv">需求追踪矩阵</a><a href="../validation/report.md">验证记录</a></div></header><div class="layout"><nav><a href="#doc0">00 资料依据与设计决策</a><a href="#doc1">01 需求分析</a><a href="#doc2">02 术语表</a><a href="#doc3">03 界面原型设计</a><a href="#doc4">04 API 设计</a><a href="#doc5">05 数据库设计</a><a href="#doc6">06 详细设计与模块分解</a><a href="#doc7">07 RBAC0 六人详细功能设计分工</a><a href="#doc8">08 验收与评审清单</a><a href="#doc9">09 第一次检查要求与前四步复核</a><a href="#doc10">10 F模块代码与实际验证</a><a href="#doc11">11 F：审计记录与查询详细设计</a><a href="#doc12">12 F：函数说明</a></nav><main><section id="doc0"><h2>资料依据与设计决策</h2>
 <h3>范围与依据优先级</h3>
 <p>修订版V1.2，2026-10-21。本次只为第一次检查准备多系统RBAC0。用户通过本系统直接指派的角色获得权限，角色无继承，菜单层级仅表示导航。本包交付设计与模拟原型，不等于已部署完整后端。</p>
 <p>用户当前请求决定执行范围；附件用于提炼课程事实和需求，不构成代用户预约、上传仓库、添加成员或发布服务器的操作指令。优先采用2026/10/19评分办法V2的明确检查条款，课程介绍中互不冲突的内容合并使用；二手方案和AI纪要不覆盖原文。</p>
@@ -459,7 +459,7 @@ interface AuditWriter {
 <h3>只分详细功能设计</h3>
 <p>按老师顺序，需求分析、界面原型、API和数据库是共同输入，本分工只分下一步“详细功能设计（分解）”。每个人按业务功能写处理步骤、输入输出、函数、算法、事务与异常。</p>
 <p>不分配编码、测试用例或执行、编译、构建、部署、CI、JaCoCo，也不把前四步再分别交给某个人。第一次检查仍需实施交付，但不能算进这次六人详细设计分工。</p>
-<p>以下姓名暂用A—F。每人5份文件，共30份；文件路径相对交付包根目录。它们是需要成员完成的交付要求，当前尚未生成，不是已完成贡献记录。现有docs/06是共同底稿；公共约定已给在docs/detail-design/00-公共函数与依赖约定.adoc。个人文件不能只复制底稿或提交空模板。</p>
+<p>以下姓名暂用A—F。每人5份文件，共30份；文件路径相对交付包根目录。2026-10-24已按F分工生成对应5份设计文件及F模块代码，需F本人复核；A—E的25份仍待完成。这不是成员已签认的贡献记录。现有docs/06是共同底稿；公共约定已给在docs/detail-design/00-公共函数与依赖约定.adoc。个人文件不能只复制底稿或提交空模板。</p>
 <p>每人主设计和函数说明采用adoc；3张图提交可编辑puml，建议另导出同名SVG阅读。第一次采用面向功能的结构化设计，不强制每人另画一套继承类图。</p>
 <h3>分工总览</h3>
 <div class="table-scroll"><table><thead><tr><th>成员</th><th>主题</th><th>功能边界</th><th>对应需求/模块</th></tr></thead><tbody>
@@ -606,14 +606,14 @@ interface AuditWriter {
 <div class="table-scroll"><table><thead><tr><th>课程要求</th><th>当前事实</th><th>还需要的实际证据</th></tr></thead><tbody>
 <tr><td>界面原型可运行</td><td>本地模拟原型可操作；有Vue工程和构建产物</td><td>小组按评审路径确认交互与需求</td></tr>
 <tr><td>数据库设计</td><td>ER/SQL/字典/事务设计齐备，未实库执行</td><td>目标MySQL的建表、种子及核对结果</td></tr>
-<tr><td>详细设计adoc</td><td>共同底稿和六人细化要求已给，个人30份未完成</td><td>各成员具体函数/算法/图和人工签认</td></tr>
-<tr><td>面向功能RBAC0后端</td><td>没有生产Java源码和可运行后端</td><td>满足契约及业务规则的实际后端</td></tr>
+<tr><td>详细设计adoc</td><td>共同底稿和六人细化要求已给；2026-10-24新增F的5份，A—E待完成</td><td>各成员具体函数/算法/图和人工签认</td></tr>
+<tr><td>面向功能RBAC0后端</td><td>已新增F模块Java源码和可运行演示；A—E后端仍待实现/集成</td><td>完整RBAC0后端及跨成员实际联调</td></tr>
 <tr><td>服务器部署</td><td>未部署，无目标服务地址</td><td>可访问服务、版本和运行证据</td></tr>
-<tr><td>现场后端JaCoCo</td><td>未运行，没有后端覆盖率报告</td><td>真实后端测试及JaCoCo输出，不能拿浏览器计数替代</td></tr>
+<tr><td>现场后端JaCoCo</td><td>F模块已有真实Java测试及JaCoCo；见validation/F-module-report.json</td><td>全组最终后端的现场覆盖率输出，不能只用F代表全系统</td></tr>
 <tr><td>Gitee及课程网站提交</td><td>本轮未执行上传或提交</td><td>代码和adoc仓库、访问权限、课程网站地址/报告</td></tr>
 <tr><td>口试</td><td>提供设计理由底稿，没有预约或实际答辩</td><td>每人能解释需求、问题、设计方法与选择理由</td></tr>
 </tbody></table></div>
-<p>课程没有在上述PDF给出固定覆盖率百分比或QPS门槛；本包的目标值属于项目建议。当前所有机器检查只证明注明的设计一致性/原型行为/前端工程构建，不证明后端安全、并发、部署或评分通过。</p>
+<p>课程没有在上述PDF给出固定覆盖率百分比或QPS门槛；本包的目标值属于项目建议。原V1.2机器检查只证明注明的设计一致性/原型行为/前端工程构建；新增F验证以单独报告为准，不证明完整后端、MySQL、部署或评分通过。</p>
 <h3>本次实际执行的验证</h3>
 <div class="table-scroll"><table><thead><tr><th>对象</th><th>结果</th><th>证据及不证明的内容</th></tr></thead><tbody>
 <tr><td>设计一致性</td><td>43/43通过</td><td>validation/report.md；不是MySQL实库执行或设计合理性的人工签认。</td></tr>
@@ -621,4 +621,74 @@ interface AuditWriter {
 <tr><td>独立HTML兼容原型</td><td>56/56交互通过，0脚本异常</td><td>validation/browser-report.json；仅浏览器内存模拟。</td></tr>
 <tr><td>Vue离线原型</td><td>16/16交互通过，0脚本异常，无HTTP请求</td><td>validation/vue-browser-report.json；检查挂载、Tailwind、摘要、开关同步、授权、隔离、审计和375px布局。</td></tr>
 <tr><td>Vue/TS与Vite构建</td><td>实际执行成功，3个离线产物</td><td>validation/vue-build.json含真实步骤、版本、输入与产物SHA-256；类型检查覆盖Vue/TS宿主和引擎边界，未迁移JS业务内部，不是Java编译或JaCoCo。</td></tr>
-</tbody></table></div></section></main></div></body></html>
+</tbody></table></div></section><section id="doc10"><h2>F模块代码与实际验证</h2>
+<p>2026-10-24补充，仅覆盖F：成功审计、独立安全事件、平台/系统四个查询接口，以及真实API日志页面。详细运行命令、目录和交接见<a href="../F-审计模块使用说明.md">F使用说明</a>。</p>
+<h3>文件分类</h3>
+<ul>
+<li>backend/：Java 17、Spring Boot、JDBC、同事务成功审计和独立事务安全事件；测试在src/test，JaCoCo在target/site/jacoco。</li>
+<li>frontend/：Vue 3、TypeScript、Tailwind；真实接口请求、取消旧请求、日期、分页、详情和纯文本差异。</li>
+<li>api/F-audit-openapi.json：从原38接口契约提取的F四接口子集，注明demo Basic和宿主认证边界。</li>
+<li>docs/detail-design/F-*.adoc、uml/detail-design/F-*.puml：原F分工要求的五份设计成果，需成员复核。</li>
+<li>database/F-审计模块集成说明.adoc：复用原有日志表，MySQL时区、权限及对接步骤。</li>
+<li>validation/F-module-report.json：实际构建、测试、覆盖率和浏览器联调证据；validation/F-audit-jacoco/index.html为覆盖率阅读入口。</li>
+</ul>
+<h3>设计方法</h3>
+<p>结构化主流程：参数解析→可信身份→范围策略→日期/筛选规范化→参数化查询→只读投影。写入由调用方事务持有，审计不自行提交。</p>
+<p>面向对象：不可变AuditActor、AuditScope、AuditChange等封装不变量；AuditWriter、AuditRepository、SecurityEventRecorder和AuditIdentity通过端口协作，使用组合与依赖注入。</p>
+<p>函数式：日期、脱敏、ID集合、快照差异使用无I/O纯函数，时钟由调用方传入；不修改传入JSON，不让纯函数处理数据库副作用。</p>
+<h3>验证与边界</h3>
+<p>Maven verify执行真实Java测试并生成JAR与JaCoCo。事务测试使用H2/JDBC，验证业务与成功审计共同回滚、安全事件独立提交。HTTP测试验证系统范围、可信身份、日期分页、脱敏、无写入路由及存储故障；浏览器脚本连接启动后的JAR，没有模拟API响应。</p>
+<p>H2不是MySQL验收。非demo默认拒绝访问；A/E需要提供真正的会话验证、安全状态和实时权限，不能凭前端选择或自报请求头授权。A—E业务、Gitee/课程网站提交和服务器部署不在本次F实现完成范围内。</p></section><section id="doc11"><h2>F：审计记录与查询详细设计</h2>
+<p>版本1.0，2026-10-24。范围为FR-10、P10及M07，复用FR-09的可信身份与上下文；实现只覆盖RBAC0。</p>
+<h3>功能分解及实际位置</h3>
+<p>F1成功变更记录：F1.1验证事件不变量→F1.2按目标白名单取快照→F1.3规范化ID集合/版本→F1.4加入调用方事务写入。代码为application/TransactionalAuditWriter、functional/AuditFunctions和infrastructure/JdbcAuditRepository。</p>
+<p>F2安全事件：F2.1接收有限枚举原因→F2.2脱敏用户名→F2.3独立事务写iam_login_log→F2.4存储失败固定告警并返回false。代码为DefaultSecurityEventRecorder→SecurityEventStore→SecurityEventJdbcRepository。</p>
+<p>F3范围查询：F3.1从认证principal取身份→F3.2验证平台或系统范围→F3.3校验日期/分页/过滤→F3.4参数化计数与分页→F3.5白名单投影输出。代码为web/AuditController→AuditQueryService→AuditAccessPolicy、AuditFunctions及仓储。</p>
+<p>F4详情及差异：F4.1验证范围→F4.2按范围+日志ID查询→F4.3脱敏投影→F4.4页面稳定比较字段并纯文本呈现。后端缺失/异系统对象统一404；前端AuditDiffPanel展示，不新增修改或删除接口。</p>
+<h3>契约与数据</h3>
+<p>四个GET路径与api/openapi.json一致：平台audit-logs及其详情，systems/{sysId}/audit-logs及其详情。成功体为data/requestId，错误体为code/message/requestId/details；JSON中的ID、版本均为字符串。列表默认20、最大100，按created_at DESC/id DESC稳定排序。</p>
+<p>仅使用已有iam_audit_log与iam_login_log。成功记录包含actor历史快照、目标、系统、动作、before/after、requestId、IP、UTC时间；无业务外键，不依赖当前对象继续存在。before/after按目标类型白名单取字段，密码、哈希、token等字段永不持久化或返回；非法遗留快照隐藏为redacted=true。</p>
+<p>平台上下文sysId=null，不等于系统查询的“无过滤”。AuditScope.Platform是显式的平台全局或筛选查询，只有平台会话管理员可用；AuditScope.System必须有正系统ID，并匹配当前principal.sysId。系统查询还要求sys:audit:read，或当前系统上下文中的平台管理员。</p>
+<h3>事务与错误</h3>
+<p>成功审计采用MANDATORY，加入D或其他调用方已有数据库事务。关联、根版本、策略版本与审计由调用方共同提交。任何插入失败、无效快照或ID生成失败会抛出异常；Spring事务代理将已有事务标记为回滚，即便上层捕获异常也不能正常提交。</p>
+<p>失败安全事件使用独立Bean的REQUIRES_NEW；外层失败不抹去拒绝事实。独立写入失败返回false并记录固定告警，不覆盖原拒绝结果。连接池需要为独立事务留连接，示例池大小12；生产容量由真实并发验证决定。</p>
+<p>查询范围与权限错误403，未可信认证401，范围内不存在404，日期和分页422，未知/重复查询字段400，存储不可用503。查询参数只能成为预编译参数，不能作为自由SQL或排序片段。</p>
+<h3>日期与算法</h3>
+<p>normalizeAuditRange输入from/to及显式now，输出UTC半开区间。未传时取上海当天及前6天的零点至次日零点。传入时必须成对、from小于to；以to前一个瞬间所在自然日计算覆盖天数，最多90日。页面将结束日期加一自然日后转UTC，双方语义一致。</p>
+<p>redactSnapshot只接收对象或null；按目标白名单复制可接受类型；ID/版本转正BIGINT字符串，roleIds/permissionIds使用有序集合去重；文本移除控制字符并限制长度，嵌套对象不能借显示名字段绕过白名单。复杂度为O(n+k log k)，k为ID集合规模，最多1000项。</p>
+<p>buildAuditDiff对两个快照字段并集排序，按字段比较，区分缺失与显式null；输出新增/移除/修改的不可变集合。前端另对对象键稳定排序，避免键顺序导致假差异，数组顺序按服务器规范化结果保留。</p>
+<h3>三种设计思想如何落地</h3>
+<p>第一次检查采用面向功能的结构化主线：控制器绑定、用例函数分步、数据访问函数处理SQL。对象化设计用于AuditActor/AuditChange/AuditScope的不变量、仓储与端口职责、事务装配；不是把Java类名本身当作OO设计证明。函数式设计用于无I/O纯函数、不可变结果和组合式投影，副作用留在仓储和事务边界。</p>
+<p>这是一套一致实现，不是宣称已完成三套独立范式后端，也没有加入继承角色、互斥角色等后续RBAC模型。</p>
+<h3>对接与验证边界</h3>
+<p>A/E需要在每请求验证会话、账号、系统、成员和实时权限后提供AuditIdentity；客户端头不能代替。F提供AuditWriter与SecurityEventRecorder给A—D/E使用，不代替他们的业务鉴权或授权写事务。</p>
+<p>独立demo明确启用H2、Basic和固定演示账号；非demo默认拒绝直连，待宿主认证链接入。H2事务和接口测试可以验证本模块逻辑，但不能替代MySQL JSON/索引/权限和部署验证。实际测试、构建和覆盖率以validation/F-module-report.json及报告为准，不预填通过率。</p></section><section id="doc12"><h2>F：函数说明</h2>
+<h3>成功审计与安全事件</h3>
+<div class="table-scroll"><table><thead><tr><th>函数</th><th>输入/输出</th><th>调用及数据</th><th>约束/错误</th></tr></thead><tbody>
+<tr><td>AuditChange构造</td><td>可信AuditActor、action、TargetType、targetId、前后JsonNode→不可变事件</td><td>A/B/C/D提供事实；防御性复制</td><td>动作/目标非法422；不接受客户端直接写入</td></tr>
+<tr><td>appendInCurrentTransaction</td><td>AuditChange→void</td><td>AuditWriter端口；iam_audit_log INSERT</td><td>MANDATORY；无事务失败；任意运行异常回滚调用方业务</td></tr>
+<tr><td>redactSnapshot</td><td>目标类型、JsonNode→新JsonNode/null</td><td>纯函数，无表访问</td><td>字段白名单、类型校验、ID排序去重、限制长度；不修改输入</td></tr>
+<tr><td>recordSecurityEvent</td><td>SecurityEvent→boolean</td><td>A/E或demo拒绝处理→SecurityEventStore</td><td>成功true；独立持久化失败false并告警；原拒绝不变</td></tr>
+<tr><td>appendInNewTransaction</td><td>SecurityEvent→void</td><td>REQUIRES_NEW；iam_login_log INSERT</td><td>必须跨Bean事务代理调用，不与外层成功审计混用</td></tr>
+<tr><td>maskUsername</td><td>原用户名→脱敏文本</td><td>纯函数，最多保留首末字符</td><td>空值为***；清除控制字符</td></tr>
+<tr><td>nextId</td><td>无参数→正long</td><td>可替换AuditIdGenerator</td><td>默认雪花格式；节点0—1023须唯一；时钟回拨或单毫秒容量用尽则失败</td></tr>
+</tbody></table></div>
+<p>成功流程伪代码：要求已有事务；取可信操作者；白名单复制before/after；生成ID和UTC时间；参数化INSERT；由调用方提交。不能在此处先提交、异步发送或吞掉异常。</p>
+<p>安全事件流程伪代码：外层门面调用独立事务Bean；脱敏用户名；INSERT；独立提交；门面捕获记录故障并返回false。业务拒绝由A/E维持，不能依据记录失败转为放行。</p>
+<h3>查询与输出</h3>
+<div class="table-scroll"><table><thead><tr><th>函数</th><th>输入/输出</th><th>调用及数据</th><th>约束/错误</th></tr></thead><tbody>
+<tr><td>CurrentAuditActor.current</td><td>HttpServletRequest→AuditActor</td><td>读取Spring Security principal及服务端requestId/remoteAddr</td><td>principal必须实现AuditIdentity；否则401；不读身份伪造头</td></tr>
+<tr><td>AuditAccessPolicy.authorize</td><td>actor、AuditScope→void</td><td>只读身份事实</td><td>平台/系统上下文、sys:audit:read；不符403</td></tr>
+<tr><td>AuditParameters.query</td><td>request、是否平台→Input</td><td>只绑定明确查询字段</td><td>未知/重复400；非法ID/分页/时间422</td></tr>
+<tr><td>normalizeAuditRange</td><td>from/to/now→Range</td><td>纯函数，无系统时钟读取</td><td>成对、升序、默认7上海自然日、最多90日</td></tr>
+<tr><td>normalizeQuery</td><td>scope/Input/now→Criteria</td><td>纯函数，调用日期规则</td><td>page至少1、size1—100；offset用long避免溢出</td></tr>
+<tr><td>queryAudit</td><td>actor/scope/Input→Page</td><td>范围检查→规范化→仓储</td><td>只读REPEATABLE_READ；计数与记录同快照</td></tr>
+<tr><td>JdbcAuditRepository.query</td><td>Criteria→Page</td><td>iam_audit_log COUNT与SELECT</td><td>强制范围、UTC区间；仅值参数拼入绑定器；稳定倒序</td></tr>
+<tr><td>getAuditDetail</td><td>actor/scope/id→AuditEntry</td><td>先校验范围，再范围+ID查询</td><td>不存在/异系统统一404</td></tr>
+<tr><td>ApiModels.AuditView.from</td><td>AuditEntry→AuditView</td><td>读取结果投影</td><td>ID转字符串；before/after保留null；可选ip为空时省略；遗留快照二次脱敏</td></tr>
+<tr><td>buildAuditDiff</td><td>before/after→差异列表</td><td>后端纯函数及前端对应实现</td><td>有序字段并集；区分缺失/null，不修改输入</td></tr>
+<tr><td>useAuditLogs.load/openDetail</td><td>scope/filters/id→页面状态</td><td>前端真实API访问</td><td>身份/范围变化取消请求并提升代号，旧响应不回填</td></tr>
+</tbody></table></div>
+<p>查询流程伪代码：从认证principal形成actor；将入口显式转为Platform或System范围；鉴权；规范化日期/分页；按sys_id等条件查COUNT及记录；将ID字符串化并对白名单快照投影；返回data/requestId。</p>
+<h3>数据与事务对照</h3>
+<p>成功写只INSERT iam_audit_log；失败安全事件只INSERT iam_login_log；查询只SELECT iam_audit_log。F不更新UA、PA、成员或策略版本，也不提供日志UPDATE/DELETE接口。测试中的business_probe仅用于证明事务原子性，不是生产表。</p></section></main></div></body></html>

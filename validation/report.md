@@ -23,7 +23,7 @@
 |演示授权数据无跨系统关联|通过||
 |端点权限码可对应权限目录|通过||
 |FR-01至FR-11均有追踪|通过||
-|AsciiDoc include 文件存在|通过|10 份文档|
+|AsciiDoc include 文件存在|通过|13 份文档|
 |HTML 本地链接与资源存在|通过||
 |SVG 图形 XML 可解析|通过||
 |UML 源文件齐全|通过||
@@ -55,6 +55,6 @@
 浏览器交互验证另见 [browser-report.json](browser-report.json) 和原型截图。
 Vue离线原型另见 [vue-browser-report.json](vue-browser-report.json)；实际类型/构建记录见 [vue-build.json](vue-build.json)；完整OpenAPI规范校验见 [openapi-report.json](openapi-report.json)。
 
-未执行：真实 MySQL 建表和种子装载、服务端集成测试、权限攻防、真实并发事务、JaCoCo、服务器部署和压力测试。
+本报告只检查设计基线与模拟原型。未执行全系统服务端集成、MySQL建表和种子装载、全系统权限攻防/并发、服务器部署和压力测试；F模块Java测试、JaCoCo与真实接口联调请单独查看validation/F-module-report.json。
 当前环境未发现 MySQL/Docker 可执行文件；以上 SQL 检查属于结构和引用检查，不能代替目标数据库执行。
 音频没有转写，智能纪要未与原录音逐字核验。

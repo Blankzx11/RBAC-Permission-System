@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:rbac0-audit-demo;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ''
+    hikari:
+      connection-init-sql: SET TIME ZONE 'UTC'
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/demo-schema.sql
+audit:
+  demo-password: ${AUDIT_DEMO_PASSWORD:DemoOnly12345}

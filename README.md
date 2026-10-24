@@ -1,45 +1,58 @@
 # RBAC-Permission-System
 
-基于 RBAC 模型的前后端分离权限管理系统。本次导入 **RBAC0 需求与设计交付包 V1.2**（材料修订于 2026-10-21，仓库整理于 2026-10-23）。
+多系统隔离的 **RBAC0 权限管理课程项目**。仓库包含 V1.2 需求与设计基线，以及 2026-10-24 新增的 **F 审计模块实现**：成功变更审计、独立安全事件、平台/系统四个查询接口、真实 API 日志页面和五份详细设计。
 
-当前交付包括需求分析、可运行的本地界面原型、38 个接口的 OpenAPI 设计、11 张表的数据库设计、详细设计底稿和六人详细功能设计分工。**生产 Java 后端、真实 API 联调、MySQL 实库验证、服务器部署及后端 JaCoCo 尚未完成。**
+F 已可独立演示；A—E 的正式业务与认证集成、MySQL 实库验收及服务器部署仍待完成。F 的测试结果不代表整套 RBAC0 已完成。
 
 ## 分类目录
 
 | 目录/文件 | 内容 |
 | --- | --- |
-| [docs/](docs/) | 课程依据、需求、原型说明、API/数据库说明、详细设计、六人分工及前四步复核 |
-| [prototype/](prototype/) | 独立 HTML 原型、Vue 3/TypeScript/Tailwind 工程及离线构建产物 |
-| [api/](api/) | OpenAPI 3.0.3 契约、38 个接口清单、Apifox 导入说明 |
-| [database/](database/) | MySQL 建表、演示种子、只读核对 SQL、数据字典 |
-| [uml/](uml/) | 用例、实体、组件、状态与授权事务的可编辑 PlantUML 源 |
-| [scripts/](scripts/) | 契约/文档生成、原型验证、标准校验和打包脚本 |
-| [validation/](validation/) | 设计一致性、浏览器交互、OpenAPI 和 Vue 构建的已有验证记录 |
-| [deliverables/](deliverables/) | 原始完整交付 ZIP 及校验值 |
-| [frontend/](frontend/) | 前端原型入口与工程边界说明 |
-| [backend/](backend/) | 后端待实现状态和设计入口 |
+| [backend/](backend/) | F 模块 Java 17 / Spring Boot 后端、JDBC、事务及 34 项测试 |
+| [frontend/](frontend/) | F 模块 Vue 3 / TypeScript / Tailwind 页面，调用真实后端；含源码及构建产物 |
+| [docs/](docs/) | 需求、原型/API/数据库设计、六人分工；[F 主设计](docs/detail-design/F-审计记录与查询详细设计.adoc)、[F 函数说明](docs/detail-design/F-函数说明.adoc) |
+| [uml/](uml/) | 原有设计图及 [F 的三张详细设计图](uml/detail-design/) |
+| [api/](api/) | 原有 38 接口设计；[F 四接口契约](api/F-audit-openapi.json)可导入 Apifox |
+| [database/](database/) | 11 张基础表、字典、种子和[F 审计表集成说明](database/F-审计模块集成说明.adoc) |
+| [prototype/](prototype/) | 原有浏览器内存模拟原型，保留离线演示用途 |
+| [scripts/](scripts/) | 设计生成、契约校验、浏览器联调与打包脚本 |
+| [validation/](validation/) | 原有基线检查及 [F 实际验证报告](validation/F-module-report.md)、覆盖率和截图 |
+| [deliverables/](deliverables/) | 原 V1.2 设计包和新增 F 代码包，附 SHA-256 |
 
-`prototype/` 保留交付包原有位置，确保文档链接、构建脚本和已有 SHA-256 验证记录一致。`.work/`、历史备份、`node_modules/`、临时失败截图和缓存不纳入版本控制。
+## 运行 F 模块
 
-## 从哪里开始
+先阅读 [F 运行与交接说明](F-审计模块使用说明.md)。需要 Java 17+、Maven 3.6.3+ 和 Node.js 24。分别在两个终端运行：
 
-1. [第一次检查要求与前四步复核](docs/09-第一次检查要求与前四步复核.adoc)：按需求分析 → 原型 → API → 数据库检查实际产物与剩余事项。
-2. [六人详细功能设计分工](docs/07-RBAC0六人分工.adoc)：只分详细功能设计；每人主设计、函数说明及 3 张设计图，共 5 份文件。30 份个人成果待成员实际细化，不是已完成的个人贡献记录。
-3. [需求分析](docs/01-需求分析.adoc)、[API 设计](docs/04-API设计.adoc)、[数据库设计](docs/05-数据库设计.adoc)、[详细设计底稿](docs/06-详细设计与模块分解.adoc)。
-4. [完整交付包说明](README.adoc) 与 [需求追踪矩阵](docs/traceability.csv)。
+```sh
+cd backend
+mvn clean verify
+java -jar target/rbac0-audit-1.0.0.jar --spring.profiles.active=demo
+```
 
-## 运行原型
+```sh
+cd frontend
+npm ci
+npm run dev
+```
 
-下载并解压 [RBAC0 完整交付包](deliverables/RBAC0-需求与设计交付包.zip)，或克隆本仓库后用浏览器打开：
+打开 `http://127.0.0.1:5173`，默认演示密码 `DemoOnly12345`，点击“查询日志”。demo 使用真实后端、JDBC 与 H2 内存数据库；平台管理员、系统 A/B 审计员和普通成员的账号说明见 [backend/README.md](backend/README.md)。重启后演示数据重新初始化。
 
-- `prototype/vue/dist/index.html`：已打包的 Vue 工程版，包含本地 JS/CSS，无 CDN 依赖。
-- `prototype/index.html`：独立 HTML 兼容版。
-- `docs/index.html`：完整设计离线阅读版；`docs/07-RBAC0六人分工.html` 为独立分工阅读版。
+也可下载 [F 完整代码包](deliverables/RBAC0-F审计模块代码包.zip)，其中 `build/rbac0-audit-1.0.0.jar` 已编译，可直接使用 Java 17+ 启动。前端 `dist` 需要 HTTP 服务和 `/api` 代理，不能双击当作离线模拟原型使用。
 
-原型初始演示口令为 `DemoOnly12345`，全部数据只在页面内存中，刷新恢复；SQL 种子的密码为禁止登录占位值。Vue/TypeScript 宿主复用共享 JavaScript 交互引擎，工程边界与复建方式见 [prototype/vue/README.adoc](prototype/vue/README.adoc)。GitHub 文件页显示 HTML 源文件，需下载到本地打开；本次没有配置网站托管。
+## 设计方法与交接
 
-## 验证与实施状态
+以结构化功能分解组织流程；通过不可变值对象、端口和组合划分对象职责；日期规范化、白名单脱敏、ID 集合与前后值差异使用无 I/O 纯函数。F 复用原有日志表，不引入角色继承或约束模型。
 
-已有记录包括 43 项设计一致性检查、38 个操作的 OpenAPI 标准校验、56 项兼容原型交互、16 项 Vue 离线交互，以及 Vue/TS 检查与构建；详见 [validation/report.md](validation/report.md)。这些是设计和模拟原型证据，不是后端集成、并发、部署或覆盖率验收结果。验证脚本当前使用本机运行时路径，换电脑需按交付说明配置。
+A/B/C/D 在业务事务中调用 `AuditWriter`，审计失败随业务一起回滚；A/E 通过 `SecurityEventRecorder` 独立记录安全事件，并提供经认证校验的 `AuditIdentity`。非 demo 默认拒绝访问，宿主 Bearer 认证需要 A/E 集成。F 没有对客户端开放日志写入、修改或删除接口。
 
-本仓库按用户要求托管到 GitHub；课程原文列出的 Gitee/课程网站提交要求见课程依据文档，未因本次 GitHub 上传而自动完成。
+六人分工仍然只分详细功能设计。F 的 5 份文件已提供、需本人复核；A—E 的 25 份仍待完成，详见[六人分工](docs/07-RBAC0六人分工.adoc)。
+
+## 验证材料
+
+F：后端 **34/34**、前端纯函数 **5/5**、浏览器真实接口联调 **25/25** 通过，Vue/TS 与 Vite 构建通过，四接口 OpenAPI 标准校验通过；JaCoCo 行覆盖率 **92.8%**，分支覆盖率 **75.57%**。
+
+详细证据：[F 报告](validation/F-module-report.md)、[测试及产物哈希](validation/F-module-report.json)、[浏览器请求记录](validation/F-browser-report.json)、[JaCoCo HTML](validation/F-audit-jacoco/index.html)。GitHub 文件页显示 HTML 源码，覆盖率阅读版需下载后打开。
+
+原设计与模拟原型仍保留 43 项一致性、56 项兼容原型、16 项 Vue 离线交互等记录，见 [基线验证记录](validation/report.md)。H2 测试不代替 MySQL 实库验收，尚未执行全组集成、服务器部署或压力测试。
+
+课程要求与剩余检查项见 [第一次检查复核](docs/09-第一次检查要求与前四步复核.adoc)。本仓库按用户要求上传到 GitHub；课程另列的 Gitee/课程网站提交未因本次上传自动完成。

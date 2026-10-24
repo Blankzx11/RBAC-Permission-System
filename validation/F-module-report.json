@@ -1,0 +1,374 @@
+{
+  "generatedAt": "2026-10-24T04:27:38.663969+00:00",
+  "scope": "F-only / RBAC0",
+  "passed": true,
+  "backend": {
+    "command": "mvn verify",
+    "javaRelease": 17,
+    "springBoot": "3.5.16",
+    "databaseTested": "H2 2.x / MySQL mode / JDBC",
+    "tests": 34,
+    "failed": 0,
+    "skipped": 0,
+    "cases": [
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "reportsAddedRemovedChangedAndExplicitNull",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "validatesAllowedFieldTypesAndRemovesControlCharacters",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "defaultsToSevenShanghaiCalendarDays",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "queryValidationAndOffsetAvoidIntegerOverflow",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "rejectsInvalidIds(String)[1]",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "rejectsInvalidIds(String)[2]",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "rejectsInvalidIds(String)[3]",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "rejectsInvalidIds(String)[4]",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "rejectsInvalidIds(String)[5]",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "rejectsInvalidIds(String)[6]",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "rejectsInvalidIds(String)[7]",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "whitelistDropsCredentialsAndCanonicalizesIdsWithoutMutatingInput",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "validatesPairedOrderedAndNinetyDayBounds",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditFunctionsTest",
+        "name": "preservesBigintPrecision",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditHttpTest",
+        "name": "appliesFiltersPaginationAndExclusiveUpperBound",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditHttpTest",
+        "name": "rejectsInvalidAndAmbiguousQueryParameters",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditHttpTest",
+        "name": "isolatesSystemPathsObjectsAndPlatformContext",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditHttpTest",
+        "name": "preservesStringIdsNullsTraceIdsAndRedactsLegacySnapshots",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditHttpTest",
+        "name": "allFourEndpointsReturnContractEnvelopes",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditHttpTest",
+        "name": "auditDenialRemainsForbiddenWhenSecurityEventStorageFails",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditHttpTest",
+        "name": "detailRejectsUnknownQueriesAndUnknownLegacySnapshotsStayHidden",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditHttpTest",
+        "name": "deniesAnonymousSpoofedAndUnprivilegedIdentities",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditHttpTest",
+        "name": "noHttpAuditMutationEndpointExists",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditTransactionTest",
+        "name": "securityLogFailureDoesNotRollBackBusinessOrTurnDenialIntoSuccess",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditTransactionTest",
+        "name": "failureSecurityEventSurvivesOuterRollback",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditTransactionTest",
+        "name": "mandatoryRejectsCallsWithoutBusinessTransaction",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditTransactionTest",
+        "name": "commitsBusinessAndAuditTogetherWithCanonicalSnapshots",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditTransactionTest",
+        "name": "businessFailureRollsBackAlreadyInsertedAudit",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.AuditTransactionTest",
+        "name": "auditInsertFailureRollsBackBusinessAndCannotBeSilentlyCaught",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.DefaultSecurityTest",
+        "name": "nonDemoDoesNotAcceptUnverifiedBearerOrIdentityHeaders",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.DomainAndIdTest",
+        "name": "idsAreUniqueWithinNodeAndSeparateAcrossNodes",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.DomainAndIdTest",
+        "name": "identityAndSnapshotsHaveDefensiveCopies",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.DomainAndIdTest",
+        "name": "invalidDomainStatesAreRejected",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "com.rbac.audit.StorageFailureHttpTest",
+        "name": "databaseFailureReturnsSanitized503",
+        "failed": false,
+        "skipped": false
+      }
+    ]
+  },
+  "frontend": {
+    "command": "npm test && npm run build",
+    "typecheck": "vue-tsc --noEmit passed",
+    "tests": 5,
+    "failed": 0,
+    "skipped": 0,
+    "cases": [
+      {
+        "class": "test",
+        "name": "BIGINT IDs preserve precision and reject overflow or injection",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "test",
+        "name": "Shanghai dates become UTC half-open intervals",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "test",
+        "name": "paired, valid, ordered dates and 90-day bounds are enforced",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "test",
+        "name": "diff is deterministic, treats explicit null separately, and leaves input unchanged",
+        "failed": false,
+        "skipped": false
+      },
+      {
+        "class": "test",
+        "name": "object property order does not produce a false difference",
+        "failed": false,
+        "skipped": false
+      }
+    ]
+  },
+  "browser": {
+    "command": "node scripts/check_f_browser.cjs",
+    "checks": 25,
+    "passed": 25,
+    "apiMocked": false,
+    "evidence": "validation/F-browser-report.json"
+  },
+  "jacoco": {
+    "INSTRUCTION": {
+      "covered": 2568,
+      "missed": 261,
+      "percent": 90.77
+    },
+    "BRANCH": {
+      "covered": 198,
+      "missed": 64,
+      "percent": 75.57
+    },
+    "LINE": {
+      "covered": 335,
+      "missed": 26,
+      "percent": 92.8
+    },
+    "COMPLEXITY": {
+      "covered": 194,
+      "missed": 69,
+      "percent": 73.76
+    },
+    "METHOD": {
+      "covered": 125,
+      "missed": 7,
+      "percent": 94.7
+    },
+    "CLASS": {
+      "covered": 39,
+      "missed": 1,
+      "percent": 97.5
+    }
+  },
+  "artifactSha256": {
+    "backend/target/rbac0-audit-1.0.0.jar": "60211dee33cb2d1e2343cb78bc1518658f81ac90879ef9ef5befd5ec744977d9",
+    "frontend/dist/index.html": "ac67c59718a35fa5f184e3d386e961ccb77738eec675225912641c525e6e6df3",
+    "frontend/dist/assets/index-BvgVVU4P.js": "40b01de002941723ba38850f6d59452f1508e02a1d4fa2a5b1fa76f2faf58df0",
+    "frontend/dist/assets/index-DMlK1K3V.css": "f2667b00829459c3a872fd57c9c60b589645fc14ca5cf12e988677013836c7d8"
+  },
+  "sourceSha256": {
+    "backend/pom.xml": "f1b2b025ecb1e0c1683d31196610ce74f7e61ee861bdee470911f77d4c958913",
+    "backend/README.md": "6ec7e768ec39df70a95319f015d89470a2841339c1885aac477372105fce2c95",
+    "backend/src/main/java/com/rbac/audit/application/AuditAccessPolicy.java": "a5be6305f1e6a4b135c35639ba9a1efe00cbd951b2f2fa74dab6f187596ac7ff",
+    "backend/src/main/java/com/rbac/audit/application/AuditQueryService.java": "3552cb66cfafeca0d8830e61f94a32974e37c41edff29f67da290c05adfcb4f6",
+    "backend/src/main/java/com/rbac/audit/application/DefaultSecurityEventRecorder.java": "0e4ccfc0bb9ef3e9800c9d00aa7915bad0e22303e47f414ee9bca8ceb39a0367",
+    "backend/src/main/java/com/rbac/audit/application/SecurityEventStore.java": "a924ef03db32861b16bfe1b5221d7848ebe1244c5317a65cf779619274aabfd4",
+    "backend/src/main/java/com/rbac/audit/application/TransactionalAuditWriter.java": "e01dda163fa661ad336bb3eddfafc8e3b3c3432a0db87a2cef379135c9f375a9",
+    "backend/src/main/java/com/rbac/audit/AuditApplication.java": "40ca4b9e83a260ff8143843820770b84781aa6f777a869e2a1875a1109819a29",
+    "backend/src/main/java/com/rbac/audit/config/AuditConfiguration.java": "a29866000a9de25dad5a06eda96e32793fd227bc69fca3506cf90573fe8aa099",
+    "backend/src/main/java/com/rbac/audit/config/DefaultAuditSecurityConfiguration.java": "9ce6a61648576f5c3e8a49b2ad6967d772ab38642bf02e6c6a12b8dedd774d83",
+    "backend/src/main/java/com/rbac/audit/demo/DemoDataInitializer.java": "605aedfe3cc70d0319ef4556782358c6aefaa9dd93a18fa3a5e76ceca8dad603",
+    "backend/src/main/java/com/rbac/audit/demo/DemoSecurityConfiguration.java": "7ed6217b6eac19a0ec9d99ebd62bd9d4923db0b8fe1517ba427bf6a2c7a271f3",
+    "backend/src/main/java/com/rbac/audit/demo/DemoUser.java": "48a25e8a9e4a6b40e32f123e34d5710cc4be8073682f5e62203d835bb765b97f",
+    "backend/src/main/java/com/rbac/audit/domain/AuditActor.java": "f64e1069e0bac6db7c5d118e347b39f4786d626d9b1a7c85f3071ca2e81463c5",
+    "backend/src/main/java/com/rbac/audit/domain/AuditChange.java": "6e27fbddaf58c82041b2b70b509f57249ebd3f3bd4c0f2cfdc9ea50569ad772f",
+    "backend/src/main/java/com/rbac/audit/domain/AuditEntry.java": "9fe8a643e527674917d3a5fac1d07e353cb573c258ed37ddc10753a262977218",
+    "backend/src/main/java/com/rbac/audit/domain/AuditFailure.java": "bb74ee6d98b95f0092bff5c3c1fb6616d0ce575d5d438760009e1842ef54e7f7",
+    "backend/src/main/java/com/rbac/audit/domain/AuditQuery.java": "b030d2d80fc88bcfe9484422985bcc60d69fe06781b35920197fc36ed5e63619",
+    "backend/src/main/java/com/rbac/audit/domain/AuditScope.java": "ec67ab39c99e1c51ee444402a8eecdaf41ba1ad63459d81521d1f49a0dd0abdb",
+    "backend/src/main/java/com/rbac/audit/domain/SecurityEvent.java": "971a440335eed2a8fb5bcc4a54762d42c5b2e7f4b7b5c27aac50bed39d25d83d",
+    "backend/src/main/java/com/rbac/audit/functional/AuditFunctions.java": "181e0700bdab65ddc61868e9f2c96e8db9272927ea657af786df96327af25a93",
+    "backend/src/main/java/com/rbac/audit/infrastructure/JdbcAuditRepository.java": "5250eb2b46a0534e1b14b77ee2ac19c00a4e00a0a9f4ea89172940c6c0e4b36f",
+    "backend/src/main/java/com/rbac/audit/infrastructure/SecurityEventJdbcRepository.java": "5d6899486f5be137c3e4865042260295375a0f588f8ed90a9e9c1b1fb2797221",
+    "backend/src/main/java/com/rbac/audit/infrastructure/SnowflakeAuditIdGenerator.java": "b44ffe1a0f3ef3ce372adb8f712b36a5218b195a5d327f9d936c208a938bfac8",
+    "backend/src/main/java/com/rbac/audit/port/AuditIdentity.java": "4cd7fb3be4fe2b8dd21bc420667d79326c6b3c7a2facd0245ca30502ffe9649c",
+    "backend/src/main/java/com/rbac/audit/port/AuditIdGenerator.java": "5d49d1ea60f45570b578c88020c026c86aaa9b5952e5f59123977e8aecd49dde",
+    "backend/src/main/java/com/rbac/audit/port/AuditRepository.java": "f20c467e8a58efb93f55edd7f850072ed612f6aaa9c4cc0588c582acd52885b9",
+    "backend/src/main/java/com/rbac/audit/port/AuditWriter.java": "b02720c3c19a38319801c93d83a67ba3a15ce0eeec0ad9c6411c70fcc65a04d7",
+    "backend/src/main/java/com/rbac/audit/port/SecurityEventRecorder.java": "78b4a8c6e9eeffade490c30c46979ebe3db28efd4eafcb38a5437f6f15ba2c92",
+    "backend/src/main/java/com/rbac/audit/web/ApiModels.java": "06453f1f4de119c883fca3b32d64218daa2c217b9079e6a23d26c5fdb90ef87c",
+    "backend/src/main/java/com/rbac/audit/web/AuditController.java": "417ff0372fea89b3cd2910253af6600ff40cdf4c66e9f09c0425cede4d48a78e",
+    "backend/src/main/java/com/rbac/audit/web/AuditExceptionHandler.java": "a0a0cce21b2cffffdf8fb5f368582db5b3f76c2b063e932adf6498fd9a7ec10f",
+    "backend/src/main/java/com/rbac/audit/web/AuditHttpErrors.java": "bcea9280a2dd58b164a9b0f4c4fcc6f24ce5dc03541838aa8562e37619426b5d",
+    "backend/src/main/java/com/rbac/audit/web/AuditParameters.java": "e0fc4a765e5e20dac727494fe3403a9f87f65509f62177918d38d7030c0946e3",
+    "backend/src/main/java/com/rbac/audit/web/CurrentAuditActor.java": "346ef780cf9db338e572a448a5501dd6d6cc5e25383139fa90cbe14333882f2d",
+    "backend/src/main/java/com/rbac/audit/web/RequestContextFilter.java": "4b40d6f2b524198f84cc9588996c43e4d43598d4921206d3d355ec8ac533c644",
+    "backend/src/main/resources/application-demo.yml": "75c49784c4c618d31f250e3986e7aeedc40d083c00ce0343b7ddd4eee6aada97",
+    "backend/src/main/resources/application.yml": "514a6547daa2af70dc0d40f81a2d43285d547506473c6c6ef98c738ba34bedbd",
+    "backend/src/main/resources/db/demo-schema.sql": "0a102510ebea1ffcb5050014e20ac626bd674c10a34f0673c03086d1831c9a8f",
+    "backend/src/test/java/com/rbac/audit/AuditFunctionsTest.java": "8344d56c2334153383c385d3d18759bcc2601fa20e595cd043f05f6e7dcfb771",
+    "backend/src/test/java/com/rbac/audit/AuditHttpTest.java": "ea7da6d5bffdedd519cadc69f2e9d2097db410114c6dc59c5bdc7922775c09d0",
+    "backend/src/test/java/com/rbac/audit/AuditTransactionTest.java": "fa27f212c5bfea446dab1149b042fc4b50548e674a6eaa5760c7eda99c6580ea",
+    "backend/src/test/java/com/rbac/audit/DefaultSecurityTest.java": "e6f0f0efb45f97dd936c0192c0c953e71dc56959c88fccc689bb83d568534f8b",
+    "backend/src/test/java/com/rbac/audit/DomainAndIdTest.java": "f08834c67a726f3964d300c20014346786f13c093849aff1a9d53e483fdd9024",
+    "backend/src/test/java/com/rbac/audit/StorageFailureHttpTest.java": "2b682b8876f5c10bc492dc4d46d2ded40f2d205cad35e3af34fa3e17cc18dc3e",
+    "backend/src/test/resources/application-test.yml": "0746d580cd24005ce772fcad4147e4a96a17a178668c8ca2dd607ea10698494f",
+    "frontend/index.html": "1f12507a0a3fa5271096e636e4bd3ebc843ed9732eb084c6afcb8aaa84b84d30",
+    "frontend/package-lock.json": "6ce7dc453a46e5c1cbb0d94f2acd4b3c172e1b0a925958fb1876be69f01fb34c",
+    "frontend/package.json": "1ed8a4b90992bdfc15d2ab82e9ad0b3ef565e941725b841447057c326b2fcd75",
+    "frontend/README.md": "6ef902a67678305039cc65737ca16c1f4e56d66cc88b6e94b771a9070660d09f",
+    "frontend/src/App.vue": "bc14a057bf9a239c441ed7965c273bcc0a1ed10210beb0ed69b6531697803f29",
+    "frontend/src/features/audit/auditApi.ts": "f6e7fb9be38271d9b817a0defa8d7f260539de16c249bbf7a976f6428a04de5f",
+    "frontend/src/features/audit/AuditDiffPanel.vue": "5682eda880badd1d08f2aaf54b86940ab02bbcfd48eaab815d50621135f0c598",
+    "frontend/src/features/audit/auditFunctions.ts": "5d1fb7c0d55348b293b19580ea6a365faff3142607502ce3c861884b9bd2e05e",
+    "frontend/src/features/audit/AuditLogPage.vue": "6fdbad208c4a2f423b30766f4c252ba452eecddc1cb185c616941eee14f93a17",
+    "frontend/src/features/audit/types.ts": "958d903c7bd3b16151397afa2d4e8bfdab322e7c191c7ac2a62313115bbc6cbb",
+    "frontend/src/features/audit/useAuditLogs.ts": "000de6886e0ccc881201bf41d8e97502d09071862ee89a03c17a4f10b356e118",
+    "frontend/src/main.ts": "376d6b79d3eb52d0193d316f5b32e23251fc6d54ff0fa84094a3552e28e1286b",
+    "frontend/src/style.css": "f0f5cc37838726fcc0b9d5f6f6ec7d7bed7920120fcfffd8b280cf74a0c260ba",
+    "frontend/tests/auditFunctions.test.mjs": "a1b3504dcfd6b0f4c8a8f0f620dd381d827c154867239af7917194a644b00dd1",
+    "frontend/tsconfig.json": "fc716ae60b585772d89ae2ed386374e7b101c7f0abcde6f61f6c28bae6665308",
+    "frontend/vite.config.ts": "7793ad1c2163e6cf4ae888dcad4371165e6afc367f48da618f9040919f83ec40"
+  },
+  "limits": [
+    "仅F四个查询接口与内部审计/安全事件端口",
+    "A—E生产认证和业务需要集成",
+    "未执行MySQL实库验收",
+    "未进行全组系统验收、服务器部署、压力测试或课程网站提交"
+  ]
+}

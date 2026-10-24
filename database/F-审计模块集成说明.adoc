@@ -1,0 +1,19 @@
+= F模块数据库集成
+
+生产表复用001_rbac0.sql中的iam_audit_log、iam_login_log。F代码没有增加生产表，也不会自动修改现有数据库；application.yml关闭SQL自动初始化。不要在已有库重复运行整份001。
+
+MySQL连接使用UTC，DB_URL示例为jdbc:mysql://127.0.0.1:3306/rbac0?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true。DB_USER/DB_PASSWORD通过环境配置，不提交真实口令。
+
+应用账号对两张日志表仅需SELECT、INSERT。以下仅是已有账号上的授权示例，实际库名与账号由小组确认后执行：
+
+[source,sql]
+----
+GRANT SELECT, INSERT ON rbac0.iam_audit_log TO 'rbac_app'@'%';
+GRANT SELECT, INSERT ON rbac0.iam_login_log TO 'rbac_app'@'%';
+----
+
+若账号已有库级UPDATE/DELETE，追加以上授权不会收回原权限；部署时应采用逐表最小权限。迁移/备份账户与运行账户分离。F不提供日志修改或删除API。
+
+demo/test使用resources/db/demo-schema.sql中的H2表；快照列为CLOB承载合法JSON文本。它验证实际JDBC、事务和查询行为，但不验证MySQL原生JSON类型、索引执行计划、账户授权或生产并发。生产接入还需在目标MySQL执行原表与4个查询，保留真实结果。
+
+列表索引复用(sys_id,created_at,id)和(sys_id,actor_id,created_at,id)，默认以created_at/id倒序，筛选值全部绑定为参数。审计只保存历史快照，不回查当前账号或角色才能展示。跨系统详情始终按sys_id和id同时过滤。

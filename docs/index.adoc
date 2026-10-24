@@ -23,3 +23,9 @@ include::07-RBAC0六人分工.adoc[leveloffset=+1]
 include::08-验收与评审清单.adoc[leveloffset=+1]
 
 include::09-第一次检查要求与前四步复核.adoc[leveloffset=+1]
+
+include::10-F模块实现与验证.adoc[leveloffset=+1]
+
+include::detail-design/F-审计记录与查询详细设计.adoc[leveloffset=+1]
+
+include::detail-design/F-函数说明.adoc[leveloffset=+1]

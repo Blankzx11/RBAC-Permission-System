@@ -1,0 +1,96 @@
+// Run against the built F page and a running demo backend; no API mocking.
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+let playwright;
+try { playwright = require(process.env.PLAYWRIGHT_MODULE || 'playwright'); }
+catch { playwright = require('C:/Users/123/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright'); }
+const { chromium } = playwright;
+const root = path.resolve(__dirname, '..');
+const base = process.env.F_UI_URL || 'http://127.0.0.1:15173';
+const checks = [], errors = [], requests = [];
+function record(name, passed) {
+  checks.push({ name, passed: Boolean(passed) });
+  if (!passed) throw new Error(name);
+}
+let browser;
+(async () => {
+  const browserEnv = { ...process.env }; delete browserEnv.SSLKEYLOGFILE;
+  browser = await chromium.launch({ headless: true, env: browserEnv, ...(process.env.EDGE_PATH ? { executablePath: process.env.EDGE_PATH } : process.platform === 'win32' ? { channel: 'msedge' } : {}) });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
+  page.setDefaultTimeout(10000);
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('response', response => { if (response.url().includes('/api/v1/')) requests.push({ method: response.request().method(), url: response.url(), status: response.status() }); });
+  const query = async (status = 200) => {
+    const response = page.waitForResponse(r => r.url().includes('/audit-logs') && r.request().method() === 'GET');
+    await page.getByRole('button', { name: '查询日志', exact: true }).click();
+    const result = await response;
+    record(`实际查询 HTTP ${status} (${checks.length + 1})`, result.status() === status);
+    await page.getByRole('button', { name: '查询日志', exact: true }).waitFor();
+    return result.json();
+  };
+  const choose = async name => page.getByLabel('演示身份', { exact: true }).selectOption(name);
+  await page.goto(base);
+  record('页面加载后不会自动发送认证请求', requests.length === 0);
+  let result = await query();
+  record('系统A只返回两条本系统记录，BIGINT保持字符串', result.data.total === 2 && result.data.items.every(row => row.sysId === '1' && typeof row.id === 'string'));
+  await page.locator('tbody tr').first().waitFor();
+  const detailResponse = page.waitForResponse(r => /\/audit-logs\/[0-9]+(?:\?|$)/.test(r.url()));
+  await page.getByRole('button', { name: '前后值', exact: true }).first().click();
+  const detail = await detailResponse;
+  await page.locator('dialog[open]').waitFor();
+  record('系统详情来自真实接口并显示版本差异', detail.status() === 200 && (await page.locator('dialog').textContent()).includes('version'));
+  await page.screenshot({ path: path.join(root, 'validation/F-audit-detail.png'), fullPage: true });
+  await page.getByRole('button', { name: '关闭详情', exact: true }).click();
+  await choose('auditor_b'); result = await query();
+  record('系统B身份返回自己的记录', result.data.total === 1 && result.data.items[0].sysId === '2');
+  await page.getByLabel('当前系统ID', { exact: true }).fill('1');
+  result = await query(403);
+  record('修改页面系统ID不能获得其他系统权限', result.code === 'SYSTEM_CONTEXT_MISMATCH');
+  await choose('ordinary_a'); await query(403);
+  await page.getByRole('alert').waitFor();
+  record('无审计权限显示拒绝信息且没有残留数据', (await page.getByRole('alert').textContent()).includes('403') && await page.locator('tbody tr').count() === 0);
+  await choose('platform_admin'); result = await query();
+  record('平台上下文可读取全部四条业务审计', result.data.total === 4);
+  await page.locator('tbody tr').filter({ hasText: 'CREATED_SYSTEM' }).getByRole('button', { name: '前后值', exact: true }).click();
+  await page.locator('dialog[open]').waitFor();
+  await page.getByRole('status').waitFor({ state: 'detached' });
+  record('平台详情可展示创建记录', (await page.locator('dialog').textContent()).includes('SYSTEM'));
+  await page.getByRole('button', { name: '关闭详情', exact: true }).click();
+  await page.getByLabel('筛选系统ID', { exact: true }).fill('2'); result = await query();
+  record('平台sysId过滤不会包含平台或其他系统', result.data.total === 1 && result.data.items[0].sysId === '2');
+  const clearResponse = page.waitForResponse(r => r.url().includes('/audit-logs') && r.request().method() === 'GET');
+  await page.getByRole('button', { name: '清除筛选', exact: true }).click();
+  result = await (await clearResponse).json();
+  record('清除筛选重新获取全部数据', result.data.total === 4);
+  await page.getByLabel('操作类型', { exact: true }).fill('DOES_NOT_EXIST'); result = await query();
+  record('无匹配条件返回空结果', result.data.total === 0);
+  await page.getByText('当前条件下没有日志记录', { exact: true }).waitFor();
+  await page.getByLabel('操作类型', { exact: true }).fill('');
+  await page.getByLabel('开始日期', { exact: true }).fill('2026-10-24');
+  await page.getByRole('button', { name: '查询日志', exact: true }).click();
+  await page.getByRole('alert').waitFor();
+  record('日期只填一端显示校验错误', (await page.getByRole('alert').textContent()).includes('成对'));
+  await page.getByLabel('开始日期', { exact: true }).fill('');
+  await page.getByLabel('演示密码', { exact: true }).fill('wrong-password');
+  await query(401);
+  await page.getByLabel('演示密码', { exact: true }).fill(process.env.AUDIT_DEMO_PASSWORD || 'DemoOnly12345');
+  await choose('platform_a');
+  await page.getByLabel('查询范围', { exact: true }).selectOption('platform');
+  await query(403);
+  await choose('platform_admin'); await query();
+  await page.locator('tbody tr').first().waitFor();
+  await page.screenshot({ path: path.join(root, 'validation/F-audit-page.png'), fullPage: true });
+  await page.setViewportSize({ width: 375, height: 1050 });
+  record('375px页面无整页横向溢出', await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.screenshot({ path: path.join(root, 'validation/F-audit-mobile.png'), fullPage: true });
+  record('运行过程没有脚本异常', errors.length === 0);
+  record('四种查询路由都经真实HTTP返回', requests.some(r => /platform\/audit-logs\/[0-9]+/.test(r.url)) && requests.some(r => /systems\/1\/audit-logs\/[0-9]+/.test(r.url)));
+})().catch(error => { errors.push(error.stack || String(error)); process.exitCode = 1; }).finally(async () => {
+  if (browser) await browser.close();
+  const artifacts = ['backend/target/rbac0-audit-1.0.0.jar', 'frontend/dist/index.html', ...fs.readdirSync(path.join(root, 'frontend/dist/assets')).map(name => `frontend/dist/assets/${name}`)];
+  const artifactSha256 = Object.fromEntries(artifacts.map(file => [file, crypto.createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex')]));
+  const report = { generatedAt: new Date().toISOString(), base, backendProfile: 'demo', database: 'H2 JDBC', apiMocked: false, artifactSha256, checks, errors, requests };
+  fs.writeFileSync(path.join(root, 'validation/F-browser-report.json'), JSON.stringify(report, null, 2) + '\n');
+  console.log(JSON.stringify({ passed: checks.filter(c => c.passed).length, checks: checks.length, errors: errors.length }));
+});

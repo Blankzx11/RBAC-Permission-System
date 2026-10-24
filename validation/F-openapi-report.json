@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "tool": "@apidevtools/swagger-parser",
+  "scope": "F API schema and internal references only",
+  "operations": 4,
+  "version": "1.0.0"
+}

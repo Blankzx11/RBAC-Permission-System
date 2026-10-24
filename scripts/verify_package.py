@@ -154,7 +154,7 @@ report=['# RBAC0设计包验证记录','','日期：2026-10-21（Asia/Shanghai�
 report.extend(f'|{name}|{"通过" if ok else "失败"}|{detail}|' for name,ok,detail in checks)
 report.extend(['','浏览器交互验证另见 [browser-report.json](browser-report.json) 和原型截图。',
                'Vue离线原型另见 [vue-browser-report.json](vue-browser-report.json)；实际类型/构建记录见 [vue-build.json](vue-build.json)；完整OpenAPI规范校验见 [openapi-report.json](openapi-report.json)。',
-               '', '未执行：真实 MySQL 建表和种子装载、服务端集成测试、权限攻防、真实并发事务、JaCoCo、服务器部署和压力测试。',
+               '', '本报告只检查设计基线与模拟原型。未执行全系统服务端集成、MySQL建表和种子装载、全系统权限攻防/并发、服务器部署和压力测试；F模块Java测试、JaCoCo与真实接口联调请单独查看validation/F-module-report.json。',
                '当前环境未发现 MySQL/Docker 可执行文件；以上 SQL 检查属于结构和引用检查，不能代替目标数据库执行。',
                '音频没有转写，智能纪要未与原录音逐字核验。'])
 browser_report=ROOT/'validation/browser-report.json'

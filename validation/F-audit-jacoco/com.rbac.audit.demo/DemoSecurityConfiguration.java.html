@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DemoSecurityConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.demo</a> &gt; <span class="el_source">DemoSecurityConfiguration.java</span></div><h1>DemoSecurityConfiguration.java</h1><pre class="source lang-java linenums">package com.rbac.audit.demo;
+
+import com.rbac.audit.web.AuditHttpErrors;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.*;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import java.util.List;
+import org.springframework.security.web.SecurityFilterChain;
+import java.util.Set;
+
+@Configuration
+@Profile(&quot;demo&quot;)
+<span class="fc" id="L18">public class DemoSecurityConfiguration {</span>
+    @Bean
+<span class="fc" id="L20">    PasswordEncoder demoPasswordEncoder() { return new BCryptPasswordEncoder(); }</span>
+
+    @Bean
+    UserDetailsService demoUsers(@Value(&quot;${audit.demo-password:DemoOnly12345}&quot;) String password, PasswordEncoder encoder) {
+<span class="fc" id="L24">        String encoded = encoder.encode(password);</span>
+<span class="fc" id="L25">        Set&lt;String&gt; audit = Set.of(&quot;sys:audit:read&quot;);</span>
+<span class="fc" id="L26">        var users = List.of(</span>
+<span class="fc" id="L27">            new DemoUser(&quot;platform_admin&quot;, encoded, 1, &quot;平台管理员&quot;, null, true, Set.of()),</span>
+<span class="fc" id="L28">            new DemoUser(&quot;platform_a&quot;, encoded, 1, &quot;平台管理员（系统A）&quot;, 1L, true, Set.of()),</span>
+<span class="fc" id="L29">            new DemoUser(&quot;auditor_a&quot;, encoded, 2, &quot;系统A审计员&quot;, 1L, false, audit),</span>
+<span class="fc" id="L30">            new DemoUser(&quot;auditor_b&quot;, encoded, 3, &quot;系统B审计员&quot;, 2L, false, audit),</span>
+<span class="fc" id="L31">            new DemoUser(&quot;ordinary_a&quot;, encoded, 4, &quot;普通成员&quot;, 1L, false, Set.of())</span>
+        );
+        // 每次返回新principal，避免认证完成后的eraseCredentials清空缓存口令。
+<span class="fc" id="L34">        return username -&gt; users.stream().filter(user -&gt; user.getUsername().equals(username)).findFirst()</span>
+<span class="fc" id="L35">            .map(user -&gt; new DemoUser(username, encoded, user.userId(), user.displayName(), user.sysId(), user.platformAdmin(), user.permissionCodes()))</span>
+<span class="pc" id="L36">            .orElseThrow(() -&gt; new UsernameNotFoundException(&quot;Unknown demo user&quot;));</span>
+    }
+
+    @Bean
+    SecurityFilterChain demoSecurity(HttpSecurity http, AuditHttpErrors errors) throws Exception {
+<span class="fc" id="L41">        return http.csrf(csrf -&gt; csrf.disable())</span>
+<span class="fc" id="L42">            .sessionManagement(s -&gt; s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))</span>
+<span class="fc" id="L43">            .authorizeHttpRequests(a -&gt; a.anyRequest().authenticated())</span>
+<span class="fc" id="L44">            .httpBasic(basic -&gt; basic.authenticationEntryPoint(errors::demoLoginFailed))</span>
+<span class="fc" id="L45">            .exceptionHandling(e -&gt; e.authenticationEntryPoint(errors::demoLoginFailed).accessDeniedHandler(errors::forbidden))</span>
+<span class="fc" id="L46">            .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

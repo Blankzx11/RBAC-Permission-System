@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecurityEventJdbcRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.infrastructure</a> &gt; <span class="el_source">SecurityEventJdbcRepository.java</span></div><h1>SecurityEventJdbcRepository.java</h1><pre class="source lang-java linenums">package com.rbac.audit.infrastructure;
+
+import com.rbac.audit.domain.SecurityEvent;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.time.Instant;
+
+@Repository
+public class SecurityEventJdbcRepository {
+    private final NamedParameterJdbcTemplate jdbc;
+<span class="fc" id="L14">    public SecurityEventJdbcRepository(NamedParameterJdbcTemplate jdbc) { this.jdbc = jdbc; }</span>
+
+    public void insert(long id, SecurityEvent event, String maskedUsername, Instant at) {
+<span class="fc" id="L17">        var params = new MapSqlParameterSource().addValue(&quot;id&quot;, id).addValue(&quot;userId&quot;, event.userId(), Types.BIGINT)</span>
+<span class="fc" id="L18">            .addValue(&quot;username&quot;, maskedUsername).addValue(&quot;sysId&quot;, event.sysId(), Types.BIGINT)</span>
+<span class="fc" id="L19">            .addValue(&quot;outcome&quot;, event.outcome()).addValue(&quot;reason&quot;, event.reason().name())</span>
+<span class="fc" id="L20">            .addValue(&quot;ip&quot;, event.ip(), Types.VARCHAR).addValue(&quot;requestId&quot;, event.requestId()).addValue(&quot;at&quot;, Timestamp.from(at));</span>
+<span class="fc" id="L21">        jdbc.update(&quot;INSERT INTO iam_login_log(id,user_id,username,sys_id,outcome,reason,ip,request_id,created_at) VALUES(:id,:userId,:username,:sysId,:outcome,:reason,:ip,:requestId,:at)&quot;, params);</span>
+<span class="fc" id="L22">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

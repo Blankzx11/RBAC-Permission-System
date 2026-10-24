@@ -1,0 +1,49 @@
+= F：审计记录与查询详细设计
+
+版本1.0，2026-10-24。范围为FR-10、P10及M07，复用FR-09的可信身份与上下文；实现只覆盖RBAC0。
+
+== 功能分解及实际位置
+
+F1成功变更记录：F1.1验证事件不变量→F1.2按目标白名单取快照→F1.3规范化ID集合/版本→F1.4加入调用方事务写入。代码为application/TransactionalAuditWriter、functional/AuditFunctions和infrastructure/JdbcAuditRepository。
+
+F2安全事件：F2.1接收有限枚举原因→F2.2脱敏用户名→F2.3独立事务写iam_login_log→F2.4存储失败固定告警并返回false。代码为DefaultSecurityEventRecorder→SecurityEventStore→SecurityEventJdbcRepository。
+
+F3范围查询：F3.1从认证principal取身份→F3.2验证平台或系统范围→F3.3校验日期/分页/过滤→F3.4参数化计数与分页→F3.5白名单投影输出。代码为web/AuditController→AuditQueryService→AuditAccessPolicy、AuditFunctions及仓储。
+
+F4详情及差异：F4.1验证范围→F4.2按范围+日志ID查询→F4.3脱敏投影→F4.4页面稳定比较字段并纯文本呈现。后端缺失/异系统对象统一404；前端AuditDiffPanel展示，不新增修改或删除接口。
+
+== 契约与数据
+
+四个GET路径与api/openapi.json一致：平台audit-logs及其详情，systems/{sysId}/audit-logs及其详情。成功体为data/requestId，错误体为code/message/requestId/details；JSON中的ID、版本均为字符串。列表默认20、最大100，按created_at DESC/id DESC稳定排序。
+
+仅使用已有iam_audit_log与iam_login_log。成功记录包含actor历史快照、目标、系统、动作、before/after、requestId、IP、UTC时间；无业务外键，不依赖当前对象继续存在。before/after按目标类型白名单取字段，密码、哈希、token等字段永不持久化或返回；非法遗留快照隐藏为redacted=true。
+
+平台上下文sysId=null，不等于系统查询的“无过滤”。AuditScope.Platform是显式的平台全局或筛选查询，只有平台会话管理员可用；AuditScope.System必须有正系统ID，并匹配当前principal.sysId。系统查询还要求sys:audit:read，或当前系统上下文中的平台管理员。
+
+== 事务与错误
+
+成功审计采用MANDATORY，加入D或其他调用方已有数据库事务。关联、根版本、策略版本与审计由调用方共同提交。任何插入失败、无效快照或ID生成失败会抛出异常；Spring事务代理将已有事务标记为回滚，即便上层捕获异常也不能正常提交。
+
+失败安全事件使用独立Bean的REQUIRES_NEW；外层失败不抹去拒绝事实。独立写入失败返回false并记录固定告警，不覆盖原拒绝结果。连接池需要为独立事务留连接，示例池大小12；生产容量由真实并发验证决定。
+
+查询范围与权限错误403，未可信认证401，范围内不存在404，日期和分页422，未知/重复查询字段400，存储不可用503。查询参数只能成为预编译参数，不能作为自由SQL或排序片段。
+
+== 日期与算法
+
+normalizeAuditRange输入from/to及显式now，输出UTC半开区间。未传时取上海当天及前6天的零点至次日零点。传入时必须成对、from小于to；以to前一个瞬间所在自然日计算覆盖天数，最多90日。页面将结束日期加一自然日后转UTC，双方语义一致。
+
+redactSnapshot只接收对象或null；按目标白名单复制可接受类型；ID/版本转正BIGINT字符串，roleIds/permissionIds使用有序集合去重；文本移除控制字符并限制长度，嵌套对象不能借显示名字段绕过白名单。复杂度为O(n+k log k)，k为ID集合规模，最多1000项。
+
+buildAuditDiff对两个快照字段并集排序，按字段比较，区分缺失与显式null；输出新增/移除/修改的不可变集合。前端另对对象键稳定排序，避免键顺序导致假差异，数组顺序按服务器规范化结果保留。
+
+== 三种设计思想如何落地
+
+第一次检查采用面向功能的结构化主线：控制器绑定、用例函数分步、数据访问函数处理SQL。对象化设计用于AuditActor/AuditChange/AuditScope的不变量、仓储与端口职责、事务装配；不是把Java类名本身当作OO设计证明。函数式设计用于无I/O纯函数、不可变结果和组合式投影，副作用留在仓储和事务边界。
+
+这是一套一致实现，不是宣称已完成三套独立范式后端，也没有加入继承角色、互斥角色等后续RBAC模型。
+
+== 对接与验证边界
+
+A/E需要在每请求验证会话、账号、系统、成员和实时权限后提供AuditIdentity；客户端头不能代替。F提供AuditWriter与SecurityEventRecorder给A—D/E使用，不代替他们的业务鉴权或授权写事务。
+
+独立demo明确启用H2、Basic和固定演示账号；非demo默认拒绝直连，待宿主认证链接入。H2事务和接口测试可以验证本模块逻辑，但不能替代MySQL JSON/索引/权限和部署验证。实际测试、构建和覆盖率以validation/F-module-report.json及报告为准，不预填通过率。

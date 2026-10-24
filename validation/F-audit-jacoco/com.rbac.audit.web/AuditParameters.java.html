@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditParameters.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.web</a> &gt; <span class="el_source">AuditParameters.java</span></div><h1>AuditParameters.java</h1><pre class="source lang-java linenums">package com.rbac.audit.web;
+
+import com.rbac.audit.domain.*;
+import com.rbac.audit.functional.AuditFunctions;
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+import java.util.Set;
+
+public final class AuditParameters {
+<span class="fc" id="L11">    private static final Set&lt;String&gt; COMMON = Set.of(&quot;from&quot;, &quot;to&quot;, &quot;actorId&quot;, &quot;action&quot;, &quot;page&quot;, &quot;pageSize&quot;);</span>
+    private AuditParameters() { }
+
+    public static AuditQuery.Input query(HttpServletRequest request, boolean platform) {
+<span class="fc" id="L15">        request.getParameterMap().forEach((key, values) -&gt; {</span>
+<span class="pc bpc" id="L16" title="1 of 8 branches missed.">            if ((!COMMON.contains(key) &amp;&amp; !(platform &amp;&amp; key.equals(&quot;sysId&quot;))) || values.length != 1)</span>
+<span class="fc" id="L17">                throw new AuditFailure(400, &quot;BAD_REQUEST&quot;, &quot;查询包含未知字段或重复参数&quot;);</span>
+<span class="fc" id="L18">        });</span>
+<span class="fc" id="L19">        return new AuditQuery.Input(instant(request.getParameter(&quot;from&quot;)), instant(request.getParameter(&quot;to&quot;)),</span>
+<span class="fc" id="L20">            optionalId(request.getParameter(&quot;actorId&quot;), &quot;actorId&quot;), request.getParameter(&quot;action&quot;),</span>
+<span class="fc" id="L21">            number(request.getParameter(&quot;page&quot;), 1), number(request.getParameter(&quot;pageSize&quot;), 20));</span>
+    }
+
+<span class="fc bfc" id="L24" title="All 2 branches covered.">    public static Long optionalId(String value, String field) { return value == null ? null : AuditFunctions.positiveId(value, field); }</span>
+<span class="fc" id="L25">    public static long id(String value, String field) { return AuditFunctions.positiveId(value, field); }</span>
+    public static void detail(HttpServletRequest request) {
+<span class="fc bfc" id="L27" title="All 2 branches covered.">        if (!request.getParameterMap().isEmpty()) throw new AuditFailure(400, &quot;BAD_REQUEST&quot;, &quot;详情接口不接受查询参数&quot;);</span>
+<span class="fc" id="L28">    }</span>
+
+    private static int number(String value, int defaultValue) {
+<span class="fc bfc" id="L31" title="All 2 branches covered.">        if (value == null) return defaultValue;</span>
+<span class="fc bfc" id="L32" title="All 2 branches covered.">        if (!value.matches(&quot;[0-9]{1,10}&quot;)) throw AuditFailure.invalid(&quot;分页参数无效&quot;);</span>
+<span class="fc" id="L33">        try { return Integer.parseInt(value); }</span>
+<span class="nc" id="L34">        catch (NumberFormatException ex) { throw AuditFailure.invalid(&quot;分页参数超出范围&quot;); }</span>
+    }
+
+    private static Instant instant(String value) {
+<span class="fc bfc" id="L38" title="All 2 branches covered.">        if (value == null) return null;</span>
+<span class="fc" id="L39">        try { return Instant.parse(value); }</span>
+<span class="nc" id="L40">        catch (DateTimeParseException ex) { throw AuditFailure.invalid(&quot;日期必须为带时区的ISO8601时间&quot;); }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="zh"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TransactionalAuditWriter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">RBAC0 F Audit Module</a> &gt; <a href="index.source.html" class="el_package">com.rbac.audit.application</a> &gt; <span class="el_source">TransactionalAuditWriter.java</span></div><h1>TransactionalAuditWriter.java</h1><pre class="source lang-java linenums">package com.rbac.audit.application;
+
+import com.rbac.audit.domain.*;
+import com.rbac.audit.functional.AuditFunctions;
+import com.rbac.audit.port.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.Clock;
+
+@Service
+public class TransactionalAuditWriter implements AuditWriter {
+    private final AuditRepository repository;
+    private final AuditIdGenerator ids;
+    private final Clock clock;
+
+<span class="fc" id="L17">    public TransactionalAuditWriter(AuditRepository repository, AuditIdGenerator ids, Clock clock) {</span>
+<span class="fc" id="L18">        this.repository = repository; this.ids = ids; this.clock = clock;</span>
+<span class="fc" id="L19">    }</span>
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY, rollbackFor = Exception.class)
+    public void appendInCurrentTransaction(AuditChange change) {
+<span class="fc" id="L24">        AuditActor actor = change.actor();</span>
+<span class="fc" id="L25">        var before = AuditFunctions.redactSnapshot(change.targetType(), change.before());</span>
+<span class="fc" id="L26">        var after = AuditFunctions.redactSnapshot(change.targetType(), change.after());</span>
+<span class="fc" id="L27">        repository.insert(new AuditEntry(ids.nextId(), actor.sysId(), actor.userId(), actor.displayName(),</span>
+<span class="fc" id="L28">            change.action(), change.targetType().name(), change.targetId(), before, after,</span>
+<span class="fc" id="L29">            actor.requestId(), actor.ip(), clock.instant()));</span>
+<span class="fc" id="L30">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>
